@@ -1,0 +1,40 @@
+{
+  "_comment": "Blocks always run A, B, C (morning, afternoon, evening). The condition order is one of these 6 permutations. By default each session picks one at random; with --balanced, P01 gets order 0, P02 order 1, ..., P07 order 0 again; --order N forces order N. The chosen order is logged in session_start.",
+  "block_order": [
+    "A",
+    "B",
+    "C"
+  ],
+  "orders": [
+    [
+      "silent",
+      "explanation",
+      "explanation_alternative"
+    ],
+    [
+      "silent",
+      "explanation_alternative",
+      "explanation"
+    ],
+    [
+      "explanation",
+      "silent",
+      "explanation_alternative"
+    ],
+    [
+      "explanation",
+      "explanation_alternative",
+      "silent"
+    ],
+    [
+      "explanation_alternative",
+      "silent",
+      "explanation"
+    ],
+    [
+      "explanation_alternative",
+      "explanation",
+      "silent"
+    ]
+  ]
+}

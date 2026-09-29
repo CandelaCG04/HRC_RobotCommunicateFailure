@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Session logs contain participant data: keep them out of Git
+logs/
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store

@@ -1,0 +1,115 @@
+{
+  "_comment": "Each part has 3 successes and 3 failures (one perception, one manipulation, one navigation). A navigation failure blocks a door, so no other item in that part is behind the same door. Each part also needs a scarf of scarf_rows rows; every row takes KNIT_ROW_TIME seconds (settings.py). Keep scarf_rows equal across A, B and C so the side task is the same in every condition. A part ends only when both the item list and the scarf are complete.",
+  "tutorial": {
+    "title": "Practice",
+    "goal": "Try out your robot helper: ask it for a few things.",
+    "scarf_rows": 3,
+    "items": [
+      {
+        "item": "newspaper",
+        "outcome": "success"
+      },
+      {
+        "item": "cup_of_tea",
+        "outcome": "success"
+      },
+      {
+        "item": "radio",
+        "outcome": "success"
+      }
+    ]
+  },
+  "A": {
+    "title": "Morning",
+    "goal": "Have breakfast and get comfortable before your video call with the doctor.",
+    "scarf_rows": 12,
+    "items": [
+      {
+        "item": "water_bottle",
+        "outcome": "success"
+      },
+      {
+        "item": "reading_glasses",
+        "outcome": "fail"
+      },
+      {
+        "item": "banana",
+        "outcome": "success"
+      },
+      {
+        "item": "glass_of_milk",
+        "outcome": "fail"
+      },
+      {
+        "item": "tv_remote",
+        "outcome": "success"
+      },
+      {
+        "item": "blanket",
+        "outcome": "fail"
+      }
+    ]
+  },
+  "B": {
+    "title": "Afternoon",
+    "goal": "Settle in for a quiet afternoon with a book and a crossword.",
+    "scarf_rows": 12,
+    "items": [
+      {
+        "item": "library_book",
+        "outcome": "success"
+      },
+      {
+        "item": "mobile_phone",
+        "outcome": "fail"
+      },
+      {
+        "item": "cardigan",
+        "outcome": "success"
+      },
+      {
+        "item": "teapot",
+        "outcome": "fail"
+      },
+      {
+        "item": "crossword_book",
+        "outcome": "success"
+      },
+      {
+        "item": "water_jug",
+        "outcome": "fail"
+      }
+    ]
+  },
+  "C": {
+    "title": "Evening",
+    "goal": "Get cosy before your favourite TV show starts.",
+    "scarf_rows": 12,
+    "items": [
+      {
+        "item": "yogurt",
+        "outcome": "success"
+      },
+      {
+        "item": "hearing_aid_case",
+        "outcome": "fail"
+      },
+      {
+        "item": "box_of_tissues",
+        "outcome": "success"
+      },
+      {
+        "item": "fruit_bowl",
+        "outcome": "fail"
+      },
+      {
+        "item": "photo_album",
+        "outcome": "success"
+      },
+      {
+        "item": "slippers",
+        "outcome": "fail"
+      }
+    ]
+  }
+}
