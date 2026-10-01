@@ -22,6 +22,7 @@ class Alternative:
     fetch_spot: Optional[str] = None    # None = no trip, just ``reply``
     reply: str = ""                 # spoken when accepted without a trip
     use: str = ""                   # activity the alternative unlocks
+    do: Optional[dict] = None       # hands-on interaction for that activity
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ class TrialItem:
     name: str
     spot: str
     use: str                        # activity the item unlocks
+    do: dict                        # hands-on interaction (interactions.py)
     succeeds: bool
     failure: Optional[Failure]
 
@@ -67,6 +69,22 @@ def participant_number(pid):
     return int(digits[-1]) if digits else 0
 
 
+INTERACTION_TYPES = ("hold", "tap", "drag", "sequence", "slider")
+
+
+def _parse_do(owner, spec, name):
+    """Check an interaction spec; default is clicking the item 3 times."""
+    if spec is None:
+        return {"type": "tap", "count": 3,
+                "prompt": f"Click the {name} to use it"}
+    if spec.get("type") not in INTERACTION_TYPES:
+        raise ValueError(f"'{owner}': interaction type must be one of "
+                         f"{INTERACTION_TYPES}")
+    if spec["type"] == "sequence" and not spec.get("sequence"):
+        raise ValueError(f"'{owner}': a sequence needs a 'sequence' list")
+    return spec
+
+
 def _parse_item(item_id, entry, outcome):
     if outcome not in ("success", "fail"):
         raise ValueError(f"Outcome for '{item_id}' must be success or fail")
@@ -76,16 +94,20 @@ def _parse_item(item_id, entry, outcome):
         if spec is None:
             raise ValueError(f"Item '{item_id}' is set to fail but has no "
                              f"'failure' entry in items.json")
+        alt = dict(spec["alternative"])
+        alt["do"] = _parse_do(f"{item_id} alternative", alt.get("do"),
+                              alt.get("item_name") or entry["name"])
         failure = Failure(
             type=spec["type"],
             stop_spot=spec.get("stop_spot", entry["spot"]),
             explanation=spec["explanation"],
-            alternative=Alternative(**spec["alternative"]),
+            alternative=Alternative(**alt),
         )
         if not failure.alternative.use:
             raise ValueError(f"Alternative for '{item_id}' needs a 'use'")
     use = entry.get("use") or f"Use the {entry['name']}"
-    return TrialItem(item_id, entry["name"], entry["spot"], use,
+    do = _parse_do(item_id, entry.get("do"), entry["name"])
+    return TrialItem(item_id, entry["name"], entry["spot"], use, do,
                      outcome == "success", failure)
 
 

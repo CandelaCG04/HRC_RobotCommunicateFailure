@@ -28,7 +28,7 @@ INTRO_TEXT = [
     "Ask the robot for the items on your list with the buttons at the "
     "bottom (mouse or number keys).",
     "Once you have an item, use it: the activities on the right unlock as "
-    "items arrive. Click Start and the activity takes a few seconds.",
+    "items arrive. Click one and do it (drink, put it on, dial...).",
     "Each part is finished when every item is sorted and every activity "
     "is done. A chime tells you when the robot is back or needs you.",
     "We start with a short practice round.",

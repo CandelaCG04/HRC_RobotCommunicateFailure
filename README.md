@@ -63,8 +63,20 @@ glasses", "Drink the tea"). The activity stays **locked until the
 participant has the item**: brought by the robot, replaced by the
 robot's alternative (the activity changes to match, e.g. "Put on the spare
 glasses"), or fetched themselves. Giving up on an item skips its activity.
-Once unlocked, one click starts it and it takes 6 seconds
-(`ACTIVITY_TIME`), one at a time. **A part ends when every item is
+Once unlocked, clicking it opens a short hands-on interaction with the
+item, one at a time:
+
+| Type | What you do | Used for |
+|---|---|---|
+| `hold` | Hold the mouse on the item (3 s, `HOLD_SECONDS`) | Drinking, pouring |
+| `tap` | Click the item a few times, with a short pause between clicks (`TAP_COOLDOWN`) | Taking a bite, turning a page |
+| `drag` | Drag the item onto yourself | Glasses on your face, blanket on, slippers on |
+| `sequence` | Press buttons in the order shown | Dialling a number, the TV remote, a crossword |
+| `slider` | Drag a dial into the green zone and leave it there | Tuning the radio |
+
+Each takes a few seconds and none have wrong answers: a wrong move just
+does nothing. Each item's interaction is set under `do` in `items.json`
+(alternatives have their own). **A part ends when every item is
 resolved and every unlocked activity is done.**
 
 This makes the human's part depend directly on the robot's deliveries.
@@ -120,7 +132,8 @@ git-ignored because it contains participant data.
 
 - **Human:** `request_item`, `retry`, `accept_alternative`,
   `do_it_myself`, `self_pickup`, `self_fetch_done`, `switch_request`,
-  `give_up`, `activity_start`, `activity_done`, `activity_skipped`.
+  `give_up`, `activity_start`, `activity_step` (each bite, digit, etc.),
+  `activity_done`, `activity_skipped`.
 - **Robot:** `acknowledge`, `move_start`, `arrive`, `attempt_task`,
   `pick_up`, `task_failed`, `feedback_start`, `feedback_end`,
   `hand_over`.
@@ -134,7 +147,8 @@ The key moment for the emotion analysis is `feedback_start` with a failure
 ## Changing content
 
 - `game/config/items.json`: items, where they are, the activity each one
-  unlocks (`use`), and their failure explanation and alternative.
+  unlocks (`use`) and its interaction (`do`), and their failure
+  explanation and alternative.
 - `game/config/blocks.json`: which items appear in each part, whether
   they succeed.
 - `game/config/counterbalance.json`: the condition orders.
@@ -165,6 +179,7 @@ game/
     renderer.py        all drawing
     dialog_panel.py    multiple-choice buttons
     minigame.py        activities with the fetched items
+    interactions.py    the hands-on interactions (hold, tap, drag, ...)
     sounds.py          synthesised cue sounds
     speech.py          text wrapping, optional TTS
 ```

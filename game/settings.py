@@ -57,7 +57,8 @@ BLOCK_END_DELAY = 1.0           # pause after the last item of a block
 MAX_ATTEMPTS = 5                # "Try again" disappears after this many
 BLOCK_TIME_LIMIT = 60          # soft deadline shown as a countdown
 MINIGAME_ENABLED = True
-ACTIVITY_TIME = 6.0             # seconds an activity takes once started
+HOLD_SECONDS = 3.0              # "hold" interactions: seconds to hold
+TAP_COOLDOWN = 0.8              # "tap" interactions: pause between clicks
 USE_TTS = False                 # can also be switched on with --tts
 
 # ------------------------------------------------------------ attention cues

@@ -1,14 +1,131 @@
 {
-  "newspaper": {"name": "newspaper", "spot": "sofa", "use": "Read the newspaper"},
-  "cup_of_tea": {"name": "cup of tea", "spot": "kitchen_table", "use": "Drink the tea"},
-  "radio": {"name": "radio", "spot": "desk", "use": "Listen to the radio"},
-  "water_bottle": {"name": "water bottle", "spot": "fridge", "use": "Drink some water"},
-  "banana": {"name": "banana", "spot": "kitchen_table", "use": "Eat the banana"},
-  "tv_remote": {"name": "TV remote", "spot": "tv_stand", "use": "Turn on the TV"},
+  "newspaper": {
+    "name": "newspaper",
+    "spot": "sofa",
+    "use": "Read the newspaper",
+    "do": {
+      "type": "tap",
+      "count": 3,
+      "prompt": "Click the newspaper to turn the page",
+      "style": "flip",
+      "color": [
+        225,
+        222,
+        210
+      ]
+    }
+  },
+  "cup_of_tea": {
+    "name": "cup of tea",
+    "spot": "kitchen_table",
+    "use": "Drink the tea",
+    "do": {
+      "type": "hold",
+      "mode": "drink",
+      "prompt": "Hold the mouse on the cup to drink",
+      "liquid": [
+        176,
+        120,
+        80
+      ],
+      "color": [
+        230,
+        230,
+        236
+      ]
+    }
+  },
+  "radio": {
+    "name": "radio",
+    "spot": "desk",
+    "use": "Listen to the radio",
+    "do": {
+      "type": "slider",
+      "prompt": "Drag the dial to your favourite station",
+      "color": [
+        150,
+        110,
+        80
+      ]
+    }
+  },
+  "water_bottle": {
+    "name": "water bottle",
+    "spot": "fridge",
+    "use": "Drink some water",
+    "do": {
+      "type": "hold",
+      "mode": "drink",
+      "prompt": "Hold the mouse on the bottle to drink",
+      "liquid": [
+        150,
+        195,
+        235
+      ],
+      "color": [
+        200,
+        225,
+        245
+      ]
+    }
+  },
+  "banana": {
+    "name": "banana",
+    "spot": "kitchen_table",
+    "use": "Eat the banana",
+    "do": {
+      "type": "tap",
+      "count": 4,
+      "prompt": "Click the banana to take a bite",
+      "color": [
+        238,
+        206,
+        90
+      ]
+    }
+  },
+  "tv_remote": {
+    "name": "TV remote",
+    "spot": "tv_stand",
+    "use": "Turn on the TV",
+    "do": {
+      "type": "sequence",
+      "prompt": "Turn on the TV and pick channel 5",
+      "sequence": [
+        "ON",
+        "5"
+      ],
+      "buttons": [
+        "ON",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "OFF"
+      ],
+      "color": [
+        70,
+        74,
+        86
+      ]
+    }
+  },
   "reading_glasses": {
     "name": "reading glasses",
     "spot": "bookshelf",
     "use": "Put on your reading glasses",
+    "do": {
+      "type": "drag",
+      "target": "face",
+      "prompt": "Drag the glasses onto your face",
+      "color": [
+        90,
+        90,
+        110
+      ]
+    },
     "failure": {
       "type": "perception",
       "explanation": "I can't find your reading glasses on the bookshelf.",
@@ -17,7 +134,17 @@
         "button": "Yes, bring the spare pair",
         "item_name": "spare glasses",
         "fetch_spot": "tv_stand",
-        "use": "Put on the spare glasses"
+        "use": "Put on the spare glasses",
+        "do": {
+          "type": "drag",
+          "target": "face",
+          "prompt": "Drag the spare glasses onto your face",
+          "color": [
+            140,
+            100,
+            80
+          ]
+        }
       }
     }
   },
@@ -25,6 +152,21 @@
     "name": "glass of milk",
     "spot": "counter",
     "use": "Drink the milk",
+    "do": {
+      "type": "hold",
+      "mode": "drink",
+      "prompt": "Hold the mouse on the glass to drink",
+      "liquid": [
+        245,
+        245,
+        238
+      ],
+      "color": [
+        220,
+        230,
+        240
+      ]
+    },
     "failure": {
       "type": "manipulation",
       "explanation": "I can't carry an open glass of milk without spilling it.",
@@ -33,7 +175,22 @@
         "button": "Yes, bring the carton",
         "item_name": "milk carton",
         "fetch_spot": "fridge",
-        "use": "Drink from the carton"
+        "use": "Drink from the carton",
+        "do": {
+          "type": "hold",
+          "mode": "drink",
+          "prompt": "Hold the mouse on the carton to drink",
+          "liquid": [
+            245,
+            245,
+            238
+          ],
+          "color": [
+            120,
+            170,
+            220
+          ]
+        }
       }
     }
   },
@@ -41,6 +198,16 @@
     "name": "blanket",
     "spot": "wardrobe",
     "use": "Wrap up in the blanket",
+    "do": {
+      "type": "drag",
+      "target": "body",
+      "prompt": "Drag the blanket over yourself",
+      "color": [
+        180,
+        120,
+        170
+      ]
+    },
     "failure": {
       "type": "navigation",
       "stop_spot": "bedroom_door_outside",
@@ -50,17 +217,109 @@
         "button": "Yes, bring the throw",
         "item_name": "sofa throw",
         "fetch_spot": "sofa",
-        "use": "Wrap up in the throw"
+        "use": "Wrap up in the throw",
+        "do": {
+          "type": "drag",
+          "target": "body",
+          "prompt": "Drag the throw over yourself",
+          "color": [
+            200,
+            170,
+            110
+          ]
+        }
       }
     }
   },
-  "library_book": {"name": "library book", "spot": "bookshelf", "use": "Read a chapter"},
-  "cardigan": {"name": "cardigan", "spot": "wardrobe", "use": "Put on the cardigan"},
-  "crossword_book": {"name": "crossword book", "spot": "desk", "use": "Do a crossword"},
+  "library_book": {
+    "name": "library book",
+    "spot": "bookshelf",
+    "use": "Read a chapter",
+    "do": {
+      "type": "tap",
+      "count": 4,
+      "prompt": "Click the book to turn the page",
+      "style": "flip",
+      "color": [
+        110,
+        140,
+        190
+      ]
+    }
+  },
+  "cardigan": {
+    "name": "cardigan",
+    "spot": "wardrobe",
+    "use": "Put on the cardigan",
+    "do": {
+      "type": "drag",
+      "target": "body",
+      "prompt": "Drag the cardigan onto yourself",
+      "color": [
+        150,
+        170,
+        120
+      ]
+    }
+  },
+  "crossword_book": {
+    "name": "crossword book",
+    "spot": "desk",
+    "use": "Do a crossword",
+    "do": {
+      "type": "sequence",
+      "prompt": "Clue: hot drink (3 letters). Fill in T, E, A",
+      "sequence": [
+        "T",
+        "E",
+        "A"
+      ],
+      "buttons": [
+        "A",
+        "E",
+        "O",
+        "R",
+        "S",
+        "T"
+      ],
+      "color": [
+        236,
+        236,
+        228
+      ]
+    }
+  },
   "mobile_phone": {
     "name": "mobile phone",
     "spot": "sofa",
     "use": "Call your daughter",
+    "do": {
+      "type": "sequence",
+      "prompt": "Dial your daughter's number",
+      "sequence": [
+        "4",
+        "1",
+        "7",
+        "2"
+      ],
+      "buttons": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "0"
+      ],
+      "color": [
+        90,
+        96,
+        112
+      ]
+    },
     "failure": {
       "type": "perception",
       "explanation": "I can't find your mobile phone around the sofa.",
@@ -69,7 +328,34 @@
         "button": "Yes, bring the house phone",
         "item_name": "house phone",
         "fetch_spot": "tv_stand",
-        "use": "Call your daughter"
+        "use": "Call your daughter",
+        "do": {
+          "type": "sequence",
+          "prompt": "Dial your daughter's number",
+          "sequence": [
+            "4",
+            "1",
+            "7",
+            "2"
+          ],
+          "buttons": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "0"
+          ],
+          "color": [
+            90,
+            96,
+            112
+          ]
+        }
       }
     }
   },
@@ -77,6 +363,21 @@
     "name": "teapot",
     "spot": "counter",
     "use": "Pour a cup of tea",
+    "do": {
+      "type": "hold",
+      "mode": "pour",
+      "prompt": "Hold the mouse on the teapot to pour a cup",
+      "liquid": [
+        176,
+        120,
+        80
+      ],
+      "color": [
+        200,
+        90,
+        80
+      ]
+    },
     "failure": {
       "type": "navigation",
       "stop_spot": "kitchen_door_outside",
@@ -86,7 +387,22 @@
         "button": "Yes, bring the flask",
         "item_name": "flask of tea",
         "fetch_spot": "sofa",
-        "use": "Pour tea from the flask"
+        "use": "Pour tea from the flask",
+        "do": {
+          "type": "hold",
+          "mode": "pour",
+          "prompt": "Hold the mouse on the flask to pour a cup",
+          "liquid": [
+            176,
+            120,
+            80
+          ],
+          "color": [
+            100,
+            110,
+            130
+          ]
+        }
       }
     }
   },
@@ -94,6 +410,21 @@
     "name": "water jug",
     "spot": "nightstand",
     "use": "Pour some water",
+    "do": {
+      "type": "hold",
+      "mode": "pour",
+      "prompt": "Hold the mouse on the jug to pour a glass",
+      "liquid": [
+        150,
+        195,
+        235
+      ],
+      "color": [
+        200,
+        225,
+        245
+      ]
+    },
     "failure": {
       "type": "manipulation",
       "explanation": "The water jug is too heavy for my arm when it's full.",
@@ -102,17 +433,85 @@
         "button": "Yes, bring the glass",
         "item_name": "glass of water",
         "fetch_spot": "desk",
-        "use": "Drink the water"
+        "use": "Drink the water",
+        "do": {
+          "type": "hold",
+          "mode": "drink",
+          "prompt": "Hold the mouse on the glass to drink",
+          "liquid": [
+            150,
+            195,
+            235
+          ],
+          "color": [
+            220,
+            235,
+            245
+          ]
+        }
       }
     }
   },
-  "yogurt": {"name": "yogurt", "spot": "fridge", "use": "Eat the yogurt"},
-  "box_of_tissues": {"name": "box of tissues", "spot": "bookshelf", "use": "Blow your nose"},
-  "photo_album": {"name": "photo album", "spot": "sofa", "use": "Look at the photos"},
+  "yogurt": {
+    "name": "yogurt",
+    "spot": "fridge",
+    "use": "Eat the yogurt",
+    "do": {
+      "type": "tap",
+      "count": 4,
+      "prompt": "Click the yogurt to take a spoonful",
+      "color": [
+        245,
+        240,
+        230
+      ]
+    }
+  },
+  "box_of_tissues": {
+    "name": "box of tissues",
+    "spot": "bookshelf",
+    "use": "Blow your nose",
+    "do": {
+      "type": "tap",
+      "count": 2,
+      "prompt": "Click the box to take a tissue",
+      "color": [
+        160,
+        200,
+        220
+      ]
+    }
+  },
+  "photo_album": {
+    "name": "photo album",
+    "spot": "sofa",
+    "use": "Look at the photos",
+    "do": {
+      "type": "tap",
+      "count": 4,
+      "prompt": "Click the album to see the next photo",
+      "style": "flip",
+      "color": [
+        160,
+        110,
+        90
+      ]
+    }
+  },
   "hearing_aid_case": {
     "name": "hearing aid case",
     "spot": "tv_stand",
     "use": "Put in your hearing aid",
+    "do": {
+      "type": "drag",
+      "target": "ear",
+      "prompt": "Drag the hearing aid to your ear",
+      "color": [
+        225,
+        190,
+        170
+      ]
+    },
     "failure": {
       "type": "perception",
       "explanation": "I can't see your hearing aid case. It may be too small for my camera to recognise.",
@@ -121,7 +520,27 @@
         "button": "Yes, turn on subtitles",
         "fetch_spot": null,
         "reply": "Done, the subtitles are on now.",
-        "use": "Watch TV with subtitles"
+        "use": "Watch TV with subtitles",
+        "do": {
+          "type": "sequence",
+          "prompt": "Press MENU, then SUBTITLES on the remote",
+          "sequence": [
+            "MENU",
+            "SUBTITLES"
+          ],
+          "buttons": [
+            "MENU",
+            "SUBTITLES",
+            "VOL +",
+            "VOL -"
+          ],
+          "color": [
+            70,
+            74,
+            86
+          ],
+          "object": "TV remote"
+        }
       }
     }
   },
@@ -129,6 +548,16 @@
     "name": "fruit bowl",
     "spot": "kitchen_table",
     "use": "Have some fruit",
+    "do": {
+      "type": "tap",
+      "count": 3,
+      "prompt": "Click the bowl to take some fruit",
+      "color": [
+        220,
+        150,
+        90
+      ]
+    },
     "failure": {
       "type": "manipulation",
       "explanation": "The fruit bowl is too wide for my gripper to hold safely.",
@@ -137,7 +566,17 @@
         "button": "Yes, bring a banana",
         "item_name": "banana",
         "fetch_spot": "kitchen_table",
-        "use": "Eat the banana"
+        "use": "Eat the banana",
+        "do": {
+          "type": "tap",
+          "count": 4,
+          "prompt": "Click the banana to take a bite",
+          "color": [
+            238,
+            206,
+            90
+          ]
+        }
       }
     }
   },
@@ -145,6 +584,16 @@
     "name": "slippers",
     "spot": "wardrobe",
     "use": "Put on your slippers",
+    "do": {
+      "type": "drag",
+      "target": "feet",
+      "prompt": "Drag the slippers onto your feet",
+      "color": [
+        120,
+        90,
+        150
+      ]
+    },
     "failure": {
       "type": "navigation",
       "stop_spot": "bedroom_door_outside",
@@ -154,7 +603,17 @@
         "button": "Yes, bring the socks",
         "item_name": "warm socks",
         "fetch_spot": "sofa",
-        "use": "Put on the warm socks"
+        "use": "Put on the warm socks",
+        "do": {
+          "type": "drag",
+          "target": "feet",
+          "prompt": "Drag the warm socks onto your feet",
+          "color": [
+            200,
+            110,
+            100
+          ]
+        }
       }
     }
   }

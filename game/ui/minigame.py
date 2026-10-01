@@ -5,8 +5,9 @@ glasses", "Drink the tea"). An activity stays locked until the participant
 actually has the item: brought by the robot, replaced by the robot's
 alternative (the activity changes to match, e.g. "Put on the spare
 glasses"), or fetched themselves. If they give up on an item, its activity
-is skipped. Once unlocked, one click starts it and it takes
-``ACTIVITY_TIME`` seconds, one activity at a time.
+is skipped. Once unlocked, clicking it opens a short hands-on interaction
+with the item (drink, take a bite, put it on, dial a number, ...; see
+interactions.py), one activity at a time.
 
 So the human's part depends directly on the robot's deliveries, it cannot
 be rushed ahead of them, and it needs very little attention. A block ends
@@ -15,8 +16,8 @@ Activities pause while the avatar is walking.
 """
 import pygame
 
-from game import settings
 from game.settings import COLORS
+from game.ui.interactions import make_interaction
 
 LOCKED, READY, ACTIVE, DONE, SKIPPED = (
     "locked", "ready", "active", "done", "skipped")
@@ -26,12 +27,13 @@ class Activity:
     def __init__(self, item):
         self.item = item
         self.text = item.use
+        self.spec = item.do         # which interaction, see items.json
+        self.label = item.name      # name shown on the item
         self.state = LOCKED
-        self.progress = 0.0
 
 
 class ActivityList:
-    """One row per item: locked -> ready (click) -> active -> done."""
+    """One row per item: locked -> ready -> (interaction) -> done."""
 
     TOP = 32
     ROW_H = 34
@@ -47,6 +49,7 @@ class ActivityList:
     # ------------------------------------------------------------ state
     def start_block(self, items):
         self.activities = [Activity(item) for item in items]
+        self.interaction = None     # the open hands-on interaction
 
     @property
     def complete(self):
@@ -68,7 +71,10 @@ class ActivityList:
             self._log("activity_skipped", activity)
             return
         if status == "alternative":
-            activity.text = item.failure.alternative.use
+            alt = item.failure.alternative
+            activity.text = alt.use
+            activity.spec = alt.do
+            activity.label = alt.item_name or item.name
         activity.state = READY
         self._log("activity_unlocked", activity, actor="system")
 
@@ -84,29 +90,41 @@ class ActivityList:
 
     # ------------------------------------------------------------ input
     def handle_event(self, event, enabled):
-        """Returns True if the click landed on the activity panel."""
+        """Returns True if the event was used by the activity panel."""
+        if self.interaction is not None:
+            if enabled:
+                self.interaction.handle_event(event)
+            return (event.type == pygame.MOUSEBUTTONDOWN
+                    and self.rect.collidepoint(event.pos))
         if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
                 or not self.rect.collidepoint(event.pos)):
             return False
-        if not enabled or self.active:
+        if not enabled:
             return True
         for index, activity in enumerate(self.activities):
             if (activity.state == READY
                     and self._row_rect(index).collidepoint(event.pos)):
                 activity.state = ACTIVE
-                activity.progress = 0.0
+                area = pygame.Rect(self.rect.x, self.rect.y + 30,
+                                   self.rect.w, self.rect.h - 30)
+                self.interaction = make_interaction(
+                    activity.spec, area, self.fonts, activity.label)
                 self._log("activity_start", activity)
                 return True
         return True
 
     def update(self, dt, active=True):
-        """Advance the running activity. ``active`` is False while walking."""
+        """Advance the open interaction. ``active`` is False while walking."""
         activity = self.active
         if activity is None or not active:
             return
-        activity.progress += dt / settings.ACTIVITY_TIME
-        if activity.progress >= 1.0:
+        self.interaction.update(dt)
+        for step in self.interaction.pop_steps():
+            self.logger.log("human", "activity_step",
+                            item=activity.item.item_id, detail=step)
+        if self.interaction.done:
             activity.state = DONE
+            self.interaction = None
             self._log("activity_done", activity)
             if self.complete:
                 self.sounds.play("all_done")
@@ -123,11 +141,18 @@ class ActivityList:
             COLORS["text_muted"])
         surface.blit(count, count.get_rect(topright=(self.rect.right, y + 3)))
 
-        mouse = pygame.mouse.get_pos()
-        can_start = enabled and self.active is None
-        for index, activity in enumerate(self.activities):
-            self._draw_row(surface, self._row_rect(index), activity,
-                           can_start, mouse)
+        if self.interaction is not None:
+            # replace the header with the activity being done
+            surface.fill(COLORS["panel"], (x, y, self.rect.w - 110, 26))
+            surface.blit(fonts.body.render(self.active.text, True,
+                                           COLORS["text"]), (x, y))
+            self.interaction.draw(surface, t)
+        else:
+            mouse = pygame.mouse.get_pos()
+            can_start = enabled
+            for index, activity in enumerate(self.activities):
+                self._draw_row(surface, self._row_rect(index), activity,
+                               can_start, mouse)
 
         if not enabled and not self.complete:
             veil = pygame.Surface(self.rect.size, pygame.SRCALPHA)
@@ -166,16 +191,8 @@ class ActivityList:
                              (label_rect.right, label_rect.centery), 2)
 
         right = pygame.Rect(row.right - 150, row.y + 6, 140, row.h - 12)
-        if state == ACTIVE:
-            pygame.draw.rect(surface, COLORS["panel_line"], right,
-                             border_radius=5)
-            filled = right.copy()
-            filled.w = max(4, int(right.w * min(1.0, activity.progress)))
-            pygame.draw.rect(surface, COLORS["alt"], filled,
-                             border_radius=5)
-            return
         text = {LOCKED: "waiting for item", READY: "Start",
-                DONE: "done", SKIPPED: "skipped"}[state]
+                ACTIVE: "doing...", DONE: "done", SKIPPED: "skipped"}[state]
         if state == READY:
             color = COLORS["alt"] if can_start else COLORS["text_muted"]
             image = fonts.body.render(text, True, color)
