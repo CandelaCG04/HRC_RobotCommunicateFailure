@@ -1,93 +1,118 @@
 {
-  "newspaper": {"name": "newspaper", "spot": "sofa"},
-  "cup_of_tea": {"name": "cup of tea", "spot": "kitchen_table"},
-  "radio": {"name": "radio", "spot": "desk"},
-
-  "water_bottle": {"name": "water bottle", "spot": "fridge"},
-  "banana": {"name": "banana", "spot": "kitchen_table"},
-  "tv_remote": {"name": "TV remote", "spot": "tv_stand"},
+  "newspaper": {"name": "newspaper", "spot": "sofa", "use": "Read the newspaper"},
+  "cup_of_tea": {"name": "cup of tea", "spot": "kitchen_table", "use": "Drink the tea"},
+  "radio": {"name": "radio", "spot": "desk", "use": "Listen to the radio"},
+  "water_bottle": {"name": "water bottle", "spot": "fridge", "use": "Drink some water"},
+  "banana": {"name": "banana", "spot": "kitchen_table", "use": "Eat the banana"},
+  "tv_remote": {"name": "TV remote", "spot": "tv_stand", "use": "Turn on the TV"},
   "reading_glasses": {
-    "name": "reading glasses", "spot": "bookshelf",
+    "name": "reading glasses",
+    "spot": "bookshelf",
+    "use": "Put on your reading glasses",
     "failure": {
       "type": "perception",
       "explanation": "I can't find your reading glasses on the bookshelf.",
       "alternative": {
         "offer": "I can bring your spare pair from the TV stand instead.",
         "button": "Yes, bring the spare pair",
-        "item_name": "spare glasses", "fetch_spot": "tv_stand"
+        "item_name": "spare glasses",
+        "fetch_spot": "tv_stand",
+        "use": "Put on the spare glasses"
       }
     }
   },
   "glass_of_milk": {
-    "name": "glass of milk", "spot": "counter",
+    "name": "glass of milk",
+    "spot": "counter",
+    "use": "Drink the milk",
     "failure": {
       "type": "manipulation",
       "explanation": "I can't carry an open glass of milk without spilling it.",
       "alternative": {
         "offer": "I can bring you a milk carton with a lid instead.",
         "button": "Yes, bring the carton",
-        "item_name": "milk carton", "fetch_spot": "fridge"
+        "item_name": "milk carton",
+        "fetch_spot": "fridge",
+        "use": "Drink from the carton"
       }
     }
   },
   "blanket": {
-    "name": "blanket", "spot": "wardrobe",
+    "name": "blanket",
+    "spot": "wardrobe",
+    "use": "Wrap up in the blanket",
     "failure": {
-      "type": "navigation", "stop_spot": "bedroom_door_outside",
+      "type": "navigation",
+      "stop_spot": "bedroom_door_outside",
       "explanation": "The bedroom door is closed and I can't open doors.",
       "alternative": {
         "offer": "I can bring the throw from the sofa instead.",
         "button": "Yes, bring the throw",
-        "item_name": "sofa throw", "fetch_spot": "sofa"
+        "item_name": "sofa throw",
+        "fetch_spot": "sofa",
+        "use": "Wrap up in the throw"
       }
     }
   },
-
-  "library_book": {"name": "library book", "spot": "bookshelf"},
-  "cardigan": {"name": "cardigan", "spot": "wardrobe"},
-  "crossword_book": {"name": "crossword book", "spot": "desk"},
+  "library_book": {"name": "library book", "spot": "bookshelf", "use": "Read a chapter"},
+  "cardigan": {"name": "cardigan", "spot": "wardrobe", "use": "Put on the cardigan"},
+  "crossword_book": {"name": "crossword book", "spot": "desk", "use": "Do a crossword"},
   "mobile_phone": {
-    "name": "mobile phone", "spot": "sofa",
+    "name": "mobile phone",
+    "spot": "sofa",
+    "use": "Call your daughter",
     "failure": {
       "type": "perception",
       "explanation": "I can't find your mobile phone around the sofa.",
       "alternative": {
         "offer": "I can bring the house phone from the TV stand instead.",
         "button": "Yes, bring the house phone",
-        "item_name": "house phone", "fetch_spot": "tv_stand"
+        "item_name": "house phone",
+        "fetch_spot": "tv_stand",
+        "use": "Call your daughter"
       }
     }
   },
   "teapot": {
-    "name": "teapot", "spot": "counter",
+    "name": "teapot",
+    "spot": "counter",
+    "use": "Pour a cup of tea",
     "failure": {
-      "type": "navigation", "stop_spot": "kitchen_door_outside",
+      "type": "navigation",
+      "stop_spot": "kitchen_door_outside",
       "explanation": "A chair is blocking the kitchen doorway and I can't get past it.",
       "alternative": {
         "offer": "I can bring the flask of tea from the sofa instead.",
         "button": "Yes, bring the flask",
-        "item_name": "flask of tea", "fetch_spot": "sofa"
+        "item_name": "flask of tea",
+        "fetch_spot": "sofa",
+        "use": "Pour tea from the flask"
       }
     }
   },
   "water_jug": {
-    "name": "water jug", "spot": "nightstand",
+    "name": "water jug",
+    "spot": "nightstand",
+    "use": "Pour some water",
     "failure": {
       "type": "manipulation",
       "explanation": "The water jug is too heavy for my arm when it's full.",
       "alternative": {
         "offer": "I can bring a small glass of water from the desk instead.",
         "button": "Yes, bring the glass",
-        "item_name": "glass of water", "fetch_spot": "desk"
+        "item_name": "glass of water",
+        "fetch_spot": "desk",
+        "use": "Drink the water"
       }
     }
   },
-
-  "yogurt": {"name": "yogurt", "spot": "fridge"},
-  "box_of_tissues": {"name": "box of tissues", "spot": "bookshelf"},
-  "photo_album": {"name": "photo album", "spot": "sofa"},
+  "yogurt": {"name": "yogurt", "spot": "fridge", "use": "Eat the yogurt"},
+  "box_of_tissues": {"name": "box of tissues", "spot": "bookshelf", "use": "Blow your nose"},
+  "photo_album": {"name": "photo album", "spot": "sofa", "use": "Look at the photos"},
   "hearing_aid_case": {
-    "name": "hearing aid case", "spot": "tv_stand",
+    "name": "hearing aid case",
+    "spot": "tv_stand",
+    "use": "Put in your hearing aid",
     "failure": {
       "type": "perception",
       "explanation": "I can't see your hearing aid case. It may be too small for my camera to recognise.",
@@ -95,31 +120,41 @@
         "offer": "I can turn on the TV subtitles instead.",
         "button": "Yes, turn on subtitles",
         "fetch_spot": null,
-        "reply": "Done, the subtitles are on now."
+        "reply": "Done, the subtitles are on now.",
+        "use": "Watch TV with subtitles"
       }
     }
   },
   "fruit_bowl": {
-    "name": "fruit bowl", "spot": "kitchen_table",
+    "name": "fruit bowl",
+    "spot": "kitchen_table",
+    "use": "Have some fruit",
     "failure": {
       "type": "manipulation",
       "explanation": "The fruit bowl is too wide for my gripper to hold safely.",
       "alternative": {
         "offer": "I can bring you a banana from the bowl instead.",
         "button": "Yes, bring a banana",
-        "item_name": "banana", "fetch_spot": "kitchen_table"
+        "item_name": "banana",
+        "fetch_spot": "kitchen_table",
+        "use": "Eat the banana"
       }
     }
   },
   "slippers": {
-    "name": "slippers", "spot": "wardrobe",
+    "name": "slippers",
+    "spot": "wardrobe",
+    "use": "Put on your slippers",
     "failure": {
-      "type": "navigation", "stop_spot": "bedroom_door_outside",
+      "type": "navigation",
+      "stop_spot": "bedroom_door_outside",
       "explanation": "There is a cable across the bedroom doorway and I can't cross it safely.",
       "alternative": {
         "offer": "I can bring the warm socks from the sofa basket instead.",
         "button": "Yes, bring the socks",
-        "item_name": "warm socks", "fetch_spot": "sofa"
+        "item_name": "warm socks",
+        "fetch_spot": "sofa",
+        "use": "Put on the warm socks"
       }
     }
   }

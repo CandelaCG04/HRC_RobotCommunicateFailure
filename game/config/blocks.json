@@ -1,9 +1,8 @@
 {
-  "_comment": "Each part has 3 successes and 3 failures (one perception, one manipulation, one navigation). A navigation failure blocks a door, so no other item in that part is behind the same door. Each part also needs a scarf of scarf_rows rows; every row takes KNIT_ROW_TIME seconds (settings.py). Keep scarf_rows equal across A, B and C so the side task is the same in every condition. A part ends only when both the item list and the scarf are complete.",
+  "_comment": "Each part has 3 successes and 3 failures (one perception, one manipulation, one navigation). A navigation failure blocks a door, so no other item in that part is behind the same door. Every item unlocks an activity (its 'use' in items.json) that the participant does once they have the item. A part ends when every item is resolved and every unlocked activity is done.",
   "tutorial": {
     "title": "Practice",
     "goal": "Try out your robot helper: ask it for a few things.",
-    "scarf_rows": 3,
     "items": [
       {
         "item": "newspaper",
@@ -22,7 +21,6 @@
   "A": {
     "title": "Morning",
     "goal": "Have breakfast and get comfortable before your video call with the doctor.",
-    "scarf_rows": 12,
     "items": [
       {
         "item": "water_bottle",
@@ -53,7 +51,6 @@
   "B": {
     "title": "Afternoon",
     "goal": "Settle in for a quiet afternoon with a book and a crossword.",
-    "scarf_rows": 12,
     "items": [
       {
         "item": "library_book",
@@ -84,7 +81,6 @@
   "C": {
     "title": "Evening",
     "goal": "Get cosy before your favourite TV show starts.",
-    "scarf_rows": 12,
     "items": [
       {
         "item": "yogurt",

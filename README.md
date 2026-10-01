@@ -27,7 +27,7 @@ python -m game.main --pid P01
 | `--fast 4` | Run 4x faster. For testing only, never in the study. |
 
 **Controls.** Participants use the mouse or number keys for the dialog and
-the mouse for the scarf. The researcher presses ENTER on the
+the mouse for the activities. The researcher presses ENTER on the
 block-end screens (the questionnaire is filled in there). Pressing ESC
 twice quits and logs `session_aborted`.
 
@@ -58,20 +58,20 @@ attempts), **accept the alternative** (only in `explanation_alternative`),
 for the same 3 seconds in every condition before the choices appear. The
 message stays in the speech bubble while the participant decides.
 
-At the same time, the participant knits a scarf. They pick a yarn colour,
-the row knits by itself in 8 seconds (`KNIT_ROW_TIME`), and then they
-pick the next colour whenever it suits them. **A part only ends when both
-the item list and the scarf (12 rows) are complete**, so the human and
-robot contributions are interdependent.
+Every item also unlocks an activity that uses it ("Put on your reading
+glasses", "Drink the tea"). The activity stays **locked until the
+participant has the item**: brought by the robot, replaced by the
+robot's alternative (the activity changes to match, e.g. "Put on the spare
+glasses"), or fetched themselves. Giving up on an item skips its activity.
+Once unlocked, one click starts it and it takes 6 seconds
+(`ACTIVITY_TIME`), one at a time. **A part ends when every item is
+resolved and every unlocked activity is done.**
 
-The side task is deliberately calm:
-- **It cannot be sped up.** The 12 rows take at least 96 seconds, which
-  runs alongside the robot's trips.
-- **It needs little attention**: one click now and then, no reading.
-- **It has no wrong answers**, so it cannot cause frustration that would
-  be confused with frustration about the robot.
-- **It is identical in every part** (same number of rows), and it pauses
-  while the avatar walks.
+This makes the human's part depend directly on the robot's deliveries.
+It cannot be done ahead of the robot, it needs very little attention, and
+it has no wrong answers (so it cannot cause frustration that could be
+confused with frustration about the robot). Activities pause while the
+avatar walks. The activity texts are in `items.json` (`use`).
 
 ### Screen layout
 
@@ -79,13 +79,13 @@ The house map (top left) is an ambient view of where the robot is. Your
 list, the timer and the robot's screen are to its right. **Everything the
 participant acts on sits side by side in the bottom band:** the robot's
 status, what it just said and the answer buttons on the left, and the
-scarf on the right. The robot's message also appears in its speech
+activities on the right. The robot's message also appears in its speech
 bubble on the map. Layout sizes are in `settings.py`.
 
 ### Attention cues
 
 These cues help the participant keep track of the robot while working on
-the scarf. They are identical in every condition and never reveal
+the activities. They are identical in every condition and never reveal
 *whether* or *why* the robot failed.
 
 | Moment | Sound | Visual |
@@ -93,7 +93,7 @@ the scarf. They are identical in every condition and never reveal
 | Robot arrives back (success or failure) | Rising two-note chime | The yellow "The robot is back!" strip in the bottom band flashes. |
 | Robot needs an answer or a new request | Double ping | Blue strip, pulsing ring around the robot, and a pulsing dialog panel. |
 | Still waiting after 8 s | One reminder ping per wait | (same as above) |
-| Scarf row finished / scarf complete | Soft two-note tone / short melody | The yarn balls light up again. |
+| Activity finished / all activities done | Soft two-note tone / short melody | The row turns to "done". |
 
 Each cue is logged as `system,cue,<name>`. You can tune `REMINDER_AFTER`
 and `SOUND_VOLUME` in `settings.py`.
@@ -120,11 +120,12 @@ git-ignored because it contains participant data.
 
 - **Human:** `request_item`, `retry`, `accept_alternative`,
   `do_it_myself`, `self_pickup`, `self_fetch_done`, `switch_request`,
-  `give_up`, `knit_start`, `knit_row_done`, `knit_complete`.
+  `give_up`, `activity_start`, `activity_done`, `activity_skipped`.
 - **Robot:** `acknowledge`, `move_start`, `arrive`, `attempt_task`,
   `pick_up`, `task_failed`, `feedback_start`, `feedback_end`,
   `hand_over`.
-- **System:** `session_start`, `block_start`, `item_resolved`, `cue`,
+- **System:** `session_start`, `block_start`, `item_resolved`,
+  `activity_unlocked`, `cue`,
   `time_up`, `block_end`, `session_end`, `session_aborted`.
 
 The key moment for the emotion analysis is `feedback_start` with a failure
@@ -132,10 +133,10 @@ The key moment for the emotion analysis is `feedback_start` with a failure
 
 ## Changing content
 
-- `game/config/items.json`: items, where they are, and their failure
-  explanation and alternative.
+- `game/config/items.json`: items, where they are, the activity each one
+  unlocks (`use`), and their failure explanation and alternative.
 - `game/config/blocks.json`: which items appear in each part, whether
-  they succeed, and how many scarf rows each part needs.
+  they succeed.
 - `game/config/counterbalance.json`: the condition orders.
 - `game/settings.py`: speeds, timings, the attempt cap and the time
   limit.
@@ -163,7 +164,7 @@ game/
   ui/
     renderer.py        all drawing
     dialog_panel.py    multiple-choice buttons
-    minigame.py        scarf knitting side task
+    minigame.py        activities with the fetched items
     sounds.py          synthesised cue sounds
     speech.py          text wrapping, optional TTS
 ```

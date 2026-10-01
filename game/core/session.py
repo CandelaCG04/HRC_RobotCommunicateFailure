@@ -1,8 +1,7 @@
 """Builds a participant's session plan from the JSON config files.
 
 config/items.json         every item: where it is and how it can fail
-config/blocks.json        items per block (success/fail) and how many
-                          scarf rows the block needs
+config/blocks.json        which items appear in each block, success/fail
 config/counterbalance.json  condition orders (one per participant number)
 """
 import json
@@ -22,6 +21,7 @@ class Alternative:
     item_name: str = ""             # what the robot fetches instead
     fetch_spot: Optional[str] = None    # None = no trip, just ``reply``
     reply: str = ""                 # spoken when accepted without a trip
+    use: str = ""                   # activity the alternative unlocks
 
 
 @dataclass(frozen=True)
@@ -37,6 +37,7 @@ class TrialItem:
     item_id: str
     name: str
     spot: str
+    use: str                        # activity the item unlocks
     succeeds: bool
     failure: Optional[Failure]
 
@@ -49,7 +50,6 @@ class BlockPlan:
     title: str
     goal: str
     items: list
-    scarf_rows: int         # rows to knit in this block
 
     @property
     def is_tutorial(self):
@@ -82,7 +82,10 @@ def _parse_item(item_id, entry, outcome):
             explanation=spec["explanation"],
             alternative=Alternative(**spec["alternative"]),
         )
-    return TrialItem(item_id, entry["name"], entry["spot"],
+        if not failure.alternative.use:
+            raise ValueError(f"Alternative for '{item_id}' needs a 'use'")
+    use = entry.get("use") or f"Use the {entry['name']}"
+    return TrialItem(item_id, entry["name"], entry["spot"], use,
                      outcome == "success", failure)
 
 
@@ -127,6 +130,5 @@ def build_session(pid, order_index=None, include_tutorial=True,
             trial_items.append(_parse_item(
                 trial["item"], items[trial["item"]], trial["outcome"]))
         plans.append(BlockPlan(index, block_id, condition, spec["title"],
-                               spec["goal"], trial_items,
-                               spec.get("scarf_rows", 12)))
+                               spec["goal"], trial_items))
     return plans, order_index, order

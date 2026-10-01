@@ -16,7 +16,7 @@ DEFAULT_LOG_DIR = PROJECT_ROOT / "logs"
 # |  house map (ambient view |  info: part, timer, goal,   |
 # |  of where the robot is)  |  robot screen, your list    |
 # +--------------------------+-----------------------------+
-# |  robot band: status,     |  side task: knit a scarf    |
+# |  robot band: status,     |  activities with the items  |
 # |  message, answer buttons |                             |
 # +--------------------------+-----------------------------+
 # Everything the participant acts on is in the bottom band, side by side.
@@ -57,7 +57,7 @@ BLOCK_END_DELAY = 1.0           # pause after the last item of a block
 MAX_ATTEMPTS = 5                # "Try again" disappears after this many
 BLOCK_TIME_LIMIT = 60          # soft deadline shown as a countdown
 MINIGAME_ENABLED = True
-KNIT_ROW_TIME = 8.0             # seconds one scarf row takes to knit
+ACTIVITY_TIME = 6.0             # seconds an activity takes once started
 USE_TTS = False                 # can also be switched on with --tts
 
 # ------------------------------------------------------------ attention cues

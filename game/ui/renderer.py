@@ -316,7 +316,7 @@ class Renderer:
         if phase == "done":
             if side_task_done:
                 return
-            text = "Your list is done: finish the scarf!"
+            text = "Your list is done: finish your activities!"
         else:
             text = self.STRIP_TEXT[phase]
         pulse = (math.sin(t * 5) + 1) / 2

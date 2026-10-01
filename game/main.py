@@ -17,7 +17,7 @@ from game.core.session import build_session
 from game.core.state_machine import BlockController
 from game.core.world import World
 from game.ui.dialog_panel import DialogPanel
-from game.ui.minigame import ScarfKnitting, validate_rows
+from game.ui.minigame import ActivityList
 from game.ui.renderer import Fonts, Renderer
 from game.ui.sounds import SoundBank
 from game.ui.speech import Voice
@@ -27,10 +27,10 @@ INTRO_TEXT = [
     "robot. Walking is hard for you, so the robot fetches things for you.",
     "Ask the robot for the items on your list with the buttons at the "
     "bottom (mouse or number keys).",
-    "At the same time, knit a scarf on the right: pick a yarn colour and "
-    "the row knits by itself. Pick the next colour whenever it suits you.",
-    "Each part is finished when all items are sorted AND the scarf is "
-    "done. A chime tells you when the robot is back or needs you.",
+    "Once you have an item, use it: the activities on the right unlock as "
+    "items arrive. Click Start and the activity takes a few seconds.",
+    "Each part is finished when every item is sorted and every activity "
+    "is done. A chime tells you when the robot is back or needs you.",
     "We start with a short practice round.",
 ]
 
@@ -98,7 +98,7 @@ class App:
             (band.x, band.y + 100, band.w, band.h - 100), self.fonts)
         self.sounds = SoundBank(settings.SOUND_ENABLED and not args.mute)
         self.side_panel = pygame.Rect(settings.SIDE_TASK_RECT)
-        self.minigame = ScarfKnitting(
+        self.minigame = ActivityList(
             self.side_panel.inflate(-32, -18), self.fonts, self.logger,
             self.sounds)
         self.voice = Voice(args.tts or settings.USE_TTS)
@@ -120,7 +120,6 @@ class App:
                     self.world.spot(item.failure.stop_spot)
                     if item.failure.alternative.fetch_spot:
                         self.world.spot(item.failure.alternative.fetch_spot)
-            validate_rows(block.scarf_rows)
 
     # ------------------------------------------------------------ loop
     def run(self):
@@ -199,8 +198,8 @@ class App:
             self.renderer.draw_message(
                 title,
                 [block.goal,
-                 "Get everything on your list with the robot's help and knit "
-                 "the scarf. Both must be done to finish."],
+                 "Get the things on your list with the robot's help, then use "
+                 "each one. Everything must be done to finish."],
                 "Press SPACE to start")
         elif self.mode == PLAYING:
             ctrl = self.controller
@@ -210,7 +209,8 @@ class App:
             self.renderer.draw_robot_band(ctrl, self.side_task_done, self.t)
             prompt, options = ctrl.dialog_content()
             if ctrl.done and not self.side_task_done:
-                prompt = "Your list is done. Finish the scarf to continue."
+                prompt = "Your list is done. Finish your activities to " \
+                         "continue."
             self.dialog.set_options(prompt, options)
             self.dialog.draw(self.screen, ctrl.waiting_for_user, self.t)
             self.renderer.fill_panel(self.side_panel)
@@ -256,7 +256,8 @@ class App:
                                 condition=block.condition)
         self.controller = BlockController(block, self.world, self.logger,
                                           self.voice)
-        self.minigame.start_block(block.scarf_rows)
+        self.minigame.start_block(block.items)
+        self.controller.on_resolved = self.minigame.item_resolved
         self.end_delay = 0.0
         self.mode = BLOCK_INTRO
 
@@ -272,8 +273,8 @@ class App:
             counts[status] = counts.get(status, 0) + 1
         summary = ";".join(f"{k}={v}" for k, v in sorted(counts.items()))
         self.logger.log("system", "block_end",
-                        detail=(f"{summary};scarf_rows="
-                                f"{len(self.minigame.rows)};"
+                        detail=(f"{summary};activities_done="
+                                f"{self.minigame.done_count};"
                                 f"duration={ctrl.elapsed:.1f}"))
         self.mode = BLOCK_END
 

@@ -86,6 +86,9 @@ class BlockController:
         self.cue_times = {}             # cue name -> self.elapsed when fired
         self._wait_time = 0.0
         self._reminded = False
+        # Called as on_resolved(item, status) whenever an item is resolved,
+        # so the side task can unlock the matching activity.
+        self.on_resolved = None
 
     # ------------------------------------------------------------ queries
     @property
@@ -98,7 +101,7 @@ class BlockController:
 
     @property
     def hands_free(self):
-        """False while the avatar walks (knitting pauses)."""
+        """False while the avatar walks (activities pause)."""
         return self.state not in SELF_STATES
 
     @property
@@ -372,6 +375,8 @@ class BlockController:
     def _resolve(self, status):
         self.status[self.current.item_id] = status
         self._log("system", "item_resolved", detail=status)
+        if self.on_resolved:
+            self.on_resolved(self.current, status)
         self.current = None
         self.task = None
         self._enter(State.DONE if not self.pending_items()
