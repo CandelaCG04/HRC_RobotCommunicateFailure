@@ -1,0 +1,6 @@
+opencv-contrib-python>=4.8   # camera, YuNet face detector (contrib build: required by mediapipe)
+onnxruntime                  # mbf_va_mtl emotion model
+mediapipe>=0.10.14           # Face Landmarker blendshapes (frustration)
+numpy
+pyyaml
+pytest

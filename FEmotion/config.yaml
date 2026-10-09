@@ -1,0 +1,67 @@
+# FEmotion configuration. Relative paths are resolved against this file's directory.
+
+camera:
+  index: 0
+  width: 640
+  height: 480
+  fps: 30
+  fourcc: MJPG            # null = driver default
+
+detector:                 # YuNet
+  model_path: models/face_detection_yunet_2023mar.onnx
+  rate_hz: 10
+  score_threshold: 0.7
+  nms_threshold: 0.3
+  min_face_size: 40       # pixels
+
+tracker:
+  iou_threshold: 0.3
+  min_hits: 2             # detections before a face is classified
+  timeout_s: 1.0          # a face unseen for this long is closed
+
+model:                    # mbf_va_mtl (ONNX)
+  path: models/mbf_va_mtl.onnx
+  rate_hz: 15
+  threads: 2
+  face_margin: 0.1
+  tta_flip: true          # also classify the mirror image and average (2x model cost)
+  max_yaw: 0.45           # skip faces turned further (0 = frontal, ~0.5 = profile)
+
+stability:
+  min_raw_confidence: 0.35   # raw predictions below this are discarded
+  smoothing_tau_ms: 300      # EMA time constant
+  min_state_confidence: 0.4  # smoothed confidence required for a state change
+  hold_ms: 200               # how long a new emotion must persist to become stable
+
+mesh:                     # MediaPipe Face Landmarker (frustration features only)
+  enabled: true
+  model_path: models/face_landmarker.task
+  rate_hz: 15
+  max_faces: 2
+  match_iou: 0.3
+
+frustration:              # uncalibrated heuristic
+  enabled: true
+  weights:                # weighted mean over the features available at each update
+    neg_valence: 0.25     # model valence < 0
+    arousal: 0.10         # model arousal, only while valence < 0
+    neg_emotions: 0.15    # P(angry) + P(disgust) + P(sad)
+    brow_lower: 0.25      # browDown blendshapes  (~AU4)
+    squint: 0.10          # eyeSquint             (~AU7)
+    lip_press: 0.10       # mouthPress            (~AU23/24)
+    dimple: 0.05          # mouthDimple           (~AU14)
+  blendshape_scale: 0.3   # rise over the resting baseline that counts as fully active
+  baseline_tau_s: 20
+  warmup_s: 3
+  score_tau_ms: 500
+  on_threshold: 0.5
+  off_threshold: 0.35
+  hold_on_ms: 1500
+  hold_off_ms: 1000
+
+database:
+  path: femotion.db
+
+display:
+  show_window: false      # or pass --show
+  metrics_log_interval_s: 5

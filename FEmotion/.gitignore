@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+models/
+*.db
+*.db-wal
+*.db-shm
+tests/
+
+femotion.db
