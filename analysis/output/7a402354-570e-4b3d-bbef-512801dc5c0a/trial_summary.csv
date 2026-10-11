@@ -1,0 +1,11 @@
+trial_id,condition,t_start,dur_s,robot_actions,feedback_type,emotion_at_start,emotions_during,mean_conf
+tutorial:newspaper:1,tutorial,19.493,10.9,acknowledge > move_start > arrive > attempt_task > pick_up > move_start > arrive > feedback_start > hand_over > feedback_end,success,neutral,,
+tutorial:cup_of_tea:1,tutorial,31.854,14.9,acknowledge > move_start > arrive > attempt_task > pick_up > move_start > arrive > feedback_start > hand_over > feedback_end,success,neutral,,
+tutorial:radio:1,tutorial,47.558,14.2,acknowledge > move_start > arrive > attempt_task > pick_up > move_start > arrive > feedback_start > hand_over > feedback_end,success,neutral,angry,0.5
+A:blanket:1,silent,87.898,11.8,acknowledge > move_start > arrive > attempt_task > task_failed > move_start > arrive > feedback_start > feedback_end,silent,neutral,surprise > neutral > disgust,0.5
+A:blanket:2,silent,101.751,16.5,acknowledge > move_start > arrive > attempt_task > task_failed > move_start > arrive > feedback_start > feedback_end,silent,neutral,angry > neutral,0.52
+A:water_bottle:1,silent,119.658,18.2,acknowledge > move_start > arrive > attempt_task > pick_up > move_start > arrive > feedback_start > hand_over > feedback_end,success,neutral,angry > neutral,0.53
+A:reading_glasses:1,silent,138.525,17.5,acknowledge > move_start > arrive > attempt_task > task_failed > move_start > arrive > feedback_start > feedback_end,silent,neutral,,
+A:banana:1,silent,157.165,14.9,acknowledge > move_start > arrive > attempt_task > pick_up > move_start > arrive > feedback_start > hand_over > feedback_end,success,neutral,,
+A:tv_remote:1,silent,173.832,10.8,acknowledge > move_start > arrive > attempt_task > pick_up > move_start > arrive > feedback_start > hand_over > feedback_end,success,neutral,,
+A:glass_of_milk:1,silent,186.132,15.2,acknowledge > move_start > arrive > attempt_task > task_failed > move_start > arrive > feedback_start > feedback_end,silent,neutral,,

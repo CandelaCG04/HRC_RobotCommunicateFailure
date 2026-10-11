@@ -193,3 +193,14 @@ game/
     sounds.py          synthesised cue sounds
     speech.py          text wrapping, optional TTS
 ```
+
+## Analysis
+
+Timeline plots of game events and facial emotion, failure-locked emotion
+plots and CSV exports are in `analisys/` (own virtual environment; see
+`analisys/README.md`):
+
+```bash
+analisys/.venv/bin/python -m analisys.plot_session   # figures for the latest session
+analisys/.venv/bin/python -m analisys.summary        # CSV tables + summary
+```

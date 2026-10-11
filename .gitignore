@@ -228,3 +228,7 @@ venv/
 
 # Shared session database and spool (participant data)
 data/
+
+# Analysis outputs (participant data)
+analisys/figures/
+analisys/output/
