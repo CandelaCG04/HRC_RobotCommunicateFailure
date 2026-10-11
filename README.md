@@ -1,18 +1,37 @@
 # Home-care robot: communicating failure
 
-Pygame simulation for our HRC research project (Group 5). The participant
-plays an older adult with reduced mobility. A home-care robot fetches
-items for them and sometimes fails. We manipulate **how the robot
-communicates that failure**, extending Kwon et al. (2018) to failures that
-are not about the end-effector position (perception, manipulation,
-navigation).
+Pygame simulation for our HRC research project (Group 5). The participant plays an older adult with reduced mobility. A home-care robot fetches items for them and sometimes fails. We manipulate **how the robot communicates that failure**, extending Kwon et al. (2018) to failures that are not about the end-effector position (perception, manipulation, navigation).
 
 ## Run
 
+The game and the facial-emotion recogniser (`FEmotion/`) each have their own virtual environment. Set them up once:
+
 ```bash
-pip install -r requirements.txt
-python -m game.main --pid P01
+python3 -m venv game/.venv && game/.venv/bin/pip install -r requirements.txt
+python3 -m venv FEmotion/.venv && FEmotion/.venv/bin/pip install -r FEmotion/requirements.txt
+FEmotion/.venv/bin/python FEmotion/scripts/download_models.py
 ```
+
+**One command for a study session** (from the repository root, any Python 3.10+):
+
+```bash
+python3 run_session.py --pid P01                     # game + emotion recognition
+python3 run_session.py --pid P01 -- --fullscreen     # args after -- go to the game
+python3 run_session.py --pid TEST --no-femotion -- --fast 4 --echo
+```
+
+The launcher creates one session, starts both processes with it, stops FEmotion when the game closes, and marks the session `completed` or `aborted`. If FEmotion is missing or crashes, the game keeps running.
+
+**Or start them by hand** with the same session id (two terminals):
+
+```bash
+export HRC_SESSION_ID=$(python3 -m hrc_log new-session --participant P01)
+game/.venv/bin/python -m game.main --pid P01            # terminal 1 (repo root)
+cd FEmotion && .venv/bin/python -m femotion             # terminal 2 (same HRC_SESSION_ID)
+python3 -m hrc_log end-session $HRC_SESSION_ID          # afterwards
+```
+
+`--session-id ID` and `--db PATH` work on both programs instead of the `HRC_SESSION_ID` and `HRC_DB` environment variables. Without a session id, each program starts its own session (e.g. `python -m game.main --pid P01` alone).
 
 | Option | Meaning |
 |---|---|
@@ -24,19 +43,16 @@ python -m game.main --pid P01
 | `--mute` | Turn off the cue sounds. |
 | `--fullscreen` | Fullscreen, scaled to the display. |
 | `--echo` | Also print every log row to the console. |
+| `--session-id ID` | Join this shared session (default `$HRC_SESSION_ID`, else a new one). |
+| `--db PATH` | Shared SQLite database (default `$HRC_DB`, else `data/hrc.db`). |
+| `--csv` | Also write the old per-session CSV to `logs/`. |
 | `--fast 4` | Run 4x faster. For testing only, never in the study. |
 
-**Controls.** Participants use the mouse or number keys for the dialog and
-the mouse for the activities. The researcher presses ENTER on the
-block-end screens (the questionnaire is filled in there). Pressing ESC
-twice quits and logs `session_aborted`.
+**Controls.** Participants use the mouse or number keys for the dialog and the mouse for the activities. The researcher presses ENTER on the block-end screens (the questionnaire is filled in there). Pressing ESC twice quits and logs `session_aborted`.
 
 ## Session structure
 
-Practice (3 items, all succeed), then three parts: Morning (A), Afternoon
-(B) and Evening (C). Each part has 6 items: 3 succeed and 3 fail, with one
-perception, one manipulation and one navigation failure. Each part uses
-one condition:
+Practice (3 items, all succeed), then three parts: Morning (A), Afternoon (B) and Evening (C). Each part has 6 items: 3 succeed and 3 fail, with one perception, one manipulation and one navigation failure. Each part uses one condition:
 
 | Condition | What the robot does after a failure |
 |---|---|
@@ -44,27 +60,11 @@ one condition:
 | `explanation` | Sad face and says why it failed. |
 | `explanation_alternative` | Says why and offers an alternative (an extra button). |
 
-The condition order is one of the 6 possible orders
-(`config/counterbalance.json`). By default each session picks one **at
-random**. With `--balanced`, the order comes from the participant number
-(P01 gets order 0, P02 order 1, and P07 wraps back to order 0), so every
-group of 6 participants covers each order exactly once. Either way, the
-order is logged in the `session_start` row and in the `order` column.
+The condition order is one of the 6 possible orders (`config/counterbalance.json`). By default each session picks one **at random**. With `--balanced`, the order comes from the participant number (P01 gets order 0, P02 order 1, and P07 wraps back to order 0), so every group of 6 participants covers each order exactly once. Either way, the order is logged in the `session_start` row and in the `order` column.
 
-After a failure the participant can choose **Try again** (up to 5
-attempts), **accept the alternative** (only in `explanation_alternative`),
-**I'll get it myself** (always takes 30 s, wherever the item is),
-**Something else** (ask for another item), or **Never mind**. The failure feedback is shown
-for the same 3 seconds in every condition before the choices appear. The
-message stays in the speech bubble while the participant decides.
+After a failure the participant can choose **Try again** (up to 5 attempts), **accept the alternative** (only in `explanation_alternative`), **I'll get it myself** (always takes 30 s, wherever the item is), **Something else** (ask for another item), or **Never mind**. The failure feedback is shown for the same 3 seconds in every condition before the choices appear. The message stays in the speech bubble while the participant decides.
 
-Every item also unlocks an activity that uses it ("Put on your reading
-glasses", "Drink the tea"). The activity stays **locked until the
-participant has the item**: brought by the robot, replaced by the
-robot's alternative (the activity changes to match, e.g. "Put on the spare
-glasses"), or fetched themselves. Giving up on an item skips its activity.
-Once unlocked, clicking it opens a short hands-on interaction with the
-item, one at a time:
+Every item also unlocks an activity that uses it ("Put on your reading glasses", "Drink the tea"). The activity stays **locked until the participant has the item**: brought by the robot, replaced by the robot's alternative (the activity changes to match, e.g. "Put on the spare glasses"), or fetched themselves. Giving up on an item skips its activity. Once unlocked, clicking it opens a short hands-on interaction with the item, one at a time:
 
 | Type | What you do | Used for |
 |---|---|---|
@@ -74,31 +74,17 @@ item, one at a time:
 | `sequence` | Press buttons in the order shown | Dialling a number, the TV remote, a crossword |
 | `slider` | Drag a dial into the green zone and leave it there | Tuning the radio |
 
-Each takes a few seconds and none have wrong answers: a wrong move just
-does nothing. Each item's interaction is set under `do` in `items.json`
-(alternatives have their own). **A part ends when every item is
-resolved and every unlocked activity is done.**
+Each takes a few seconds and none have wrong answers: a wrong move just does nothing. Each item's interaction is set under `do` in `items.json` (alternatives have their own). **A part ends when every item is resolved and every unlocked activity is done.**
 
-This makes the human's part depend directly on the robot's deliveries.
-It cannot be done ahead of the robot, it needs very little attention, and
-it has no wrong answers (so it cannot cause frustration that could be
-confused with frustration about the robot). Activities pause while the
-avatar walks. The activity texts are in `items.json` (`use`).
+This makes the human's part depend directly on the robot's deliveries. It cannot be done ahead of the robot, it needs very little attention, and it has no wrong answers (so it cannot cause frustration that could be confused with frustration about the robot). Activities pause while the avatar walks. The activity texts are in `items.json` (`use`).
 
 ### Screen layout
 
-The house map (top left) is an ambient view of where the robot is. Your
-list, the timer and the robot's screen are to its right. **Everything the
-participant acts on sits side by side in the bottom band:** the robot's
-status, what it just said and the answer buttons on the left, and the
-activities on the right. The robot's message also appears in its speech
-bubble on the map. Layout sizes are in `settings.py`.
+The house map (top left) is an ambient view of where the robot is. Your list, the timer and the robot's screen are to its right. **Everything the participant acts on sits side by side in the bottom band:** the robot's status, what it just said and the answer buttons on the left, and the activities on the right. The robot's message also appears in its speech bubble on the map. Layout sizes are in `settings.py`.
 
 ### Attention cues
 
-These cues help the participant keep track of the robot while working on
-the activities. They are identical in every condition and never reveal
-*whether* or *why* the robot failed.
+These cues help the participant keep track of the robot while working on the activities. They are identical in every condition and never reveal *whether* or *why* the robot failed.
 
 | Moment | Sound | Visual |
 |---|---|---|
@@ -107,19 +93,19 @@ the activities. They are identical in every condition and never reveal
 | Still waiting after 8 s | One reminder ping per wait | (same as above) |
 | Activity finished / all activities done | Soft two-note tone / short melody | The row turns to "done". |
 
-Each cue is logged as `system,cue,<name>`. You can tune `REMINDER_AFTER`
-and `SOUND_VOLUME` in `settings.py`.
+Each cue is logged as `system,cue,<name>`. You can tune `REMINDER_AFTER` and `SOUND_VOLUME` in `settings.py`.
 
 ## Log format
 
-There is one CSV per session: `logs/<pid>_<date>_<time>.csv`. The folder is
-git-ignored because it contains participant data.
+The game and FEmotion write to one SQLite database, `data/hrc.db` (git-ignored because it contains participant data), via the shared standard-library package `hrc_log/`. Each event is one row of `events`; `sessions` holds one row per session and `session_sources` one row per process that joined it. The schema is in `hrc_log/schema.sql`.
+
+**Time.** Every row stores the time at which the event was *observed*: `t_wall` (`time.time()`), `t_mono` (`time.monotonic()`) and `t_session`, seconds since the shared session start. `t_session` uses the monotonic clock when the row was written on the same machine and boot as the session start (`clock_basis = 'mono'`) and the wall clock otherwise (`'wall'`). Sort by `t_session, seq` to get one timeline of game and emotion events.
 
 | Column | Content |
 |---|---|
-| `t_unix` | Wall-clock time (`time.time()`). **Use this to align with the emotion recogniser**, which must log with the same clock. |
-| `t_iso` | The same time, human-readable. |
-| `t_session` | Seconds since the game started. |
+| `session_id`, `source` (`game`/`femotion`), `event_type`, `seq` | Which session, which program, what happened, order within that program run. |
+| `t_wall`, `t_mono`, `t_session`, `clock_basis`, `t_iso` | See above. `t_iso` is UTC. |
+| `t_game` | Seconds since the game started (the old CSV `t_session`). |
 | `participant`, `order`, `block_index`, `block_id`, `condition` | Context of the row. |
 | `actor` | `robot`, `human` or `system`. |
 | `action` | See below. |
@@ -127,6 +113,13 @@ git-ignored because it contains participant data.
 | `attempt` | Attempt number for that item (1, 2, ...). |
 | `feedback_type` | Set on `feedback_start`: `silent`, `explanation`, `explanation_alternative`, `success`, `success_alternative`, `alternative_action`. |
 | `detail` | The spoken text, destination, failure type, etc. |
+| `task_id`, `trial_id` | `<block_id>:<item>` and `<block_id>:<item>:<attempt>`, for joins. |
+| `robot_state` | Robot controller state (`game/core/state_machine.py` `State`) when the row was logged. |
+| `face_id`, `previous_emotion`, `emotion`, `confidence`, `duration_ms` | FEmotion transitions (`event_type = emotion_transition`); `emotion` NULL = face lost. |
+| `payload` | JSON for anything else. |
+
+With `--csv` the game also writes the old file `logs/<pid>_<date>_<time>.csv`
+with the columns `t_unix`, `t_iso`, `t_session`, `participant` ... `detail`.
 
 **Actions:**
 
@@ -141,8 +134,19 @@ git-ignored because it contains participant data.
   `activity_unlocked`, `cue`,
   `time_up`, `block_end`, `session_end`, `session_aborted`.
 
-The key moment for the emotion analysis is `feedback_start` with a failure
-`feedback_type`. That is when the participant learns the robot failed.
+The key moment for the emotion analysis is `feedback_start` with a failure `feedback_type`. That is when the participant learns the robot failed.
+
+**Checks and analysis queries** (`hrc_log/queries.sql`; default: latest session):
+
+```bash
+python3 -m hrc_log check [--session ID]      # integrity, counts, unclosed processes
+python3 -m hrc_log query timeline            # game + emotion events on one timeline
+python3 -m hrc_log query emotion_before_game_event
+python3 -m hrc_log query trial_summary       # robot actions and emotions per trial
+python3 -m hrc_log query all --session ID
+```
+
+**If something goes wrong.** Writes run on a background thread with a 5 s lock timeout and retries; rows that still cannot be stored are appended to `data/spool/*.jsonl` and imported later with `python3 -m hrc_log replay`. A process that crashed shows as `NOT CLOSED` in `check`; everything it logged before the crash is already in the database.
 
 ## Changing content
 
@@ -159,7 +163,13 @@ The key moment for the emotion analysis is `feedback_start` with a failure
 
 ## Code layout
 
-```
+```text
+run_session.py         starts game + FEmotion in one session
+hrc_log/               shared SQLite event log (standard library only)
+  schema.sql           tables, indexes, the emotion_events view
+  writer.py            background writer, retries, spool
+  queries.sql          validation / analysis queries
+  migrate.py           import of old femotion.db / CSV files
 game/
   main.py              screens, main loop, block sequencing
   settings.py          all tunable numbers
@@ -171,7 +181,7 @@ game/
     pathfinding.py     A*
     movement.py        smooth grid movement
     avatar.py          the participant's character
-    logger.py          CSV event log
+    logger.py          event log (shared database, optional CSV)
   robot/
     robot.py           robot agent (face, carrying)
     responses.py       condition-dependent robot speech

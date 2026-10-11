@@ -9,6 +9,7 @@ Requires Python 3.10+ and a webcam.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
+source .venv/bin/activate
 .venv/bin/python scripts/download_models.py   # downloads the 3 model files into models/
 ```
 
@@ -23,16 +24,22 @@ python3 -m venv .venv
 
 All settings are in `config.yaml`: camera, rates, stability, frustration weights and thresholds.
 
-Results go to `femotion.db`, one row per state change:
+Results go to the database shared with the game, `../data/hrc.db` (table `events`,
+`source = 'femotion'`), one row per emotion state change. Pass `--session-id ID` (or set
+`HRC_SESSION_ID`) to log into the game's session; see the root README for running both together.
+The legacy-shaped view `emotion_events` is still available:
 
 ```bash
-sqlite3 femotion.db "select face_id, kind, timestamp, previous_emotion, emotion, confidence, duration_ms from emotion_events"
+python3 -c "import sqlite3; [print(r) for r in sqlite3.connect('../data/hrc.db').execute(
+  'select face_id, kind, timestamp, previous_emotion, emotion, confidence, duration_ms from emotion_events')]"
 ```
 
-- `kind` is `emotion` or `frustration`.
-- `timestamp` (UTC) is when the new state began.
+- `timestamp` (UTC) is when the new state began; `events.t_mono` / `t_session` hold the same
+  instant on the shared session timeline.
 - `duration_ms` is how long the previous state lasted.
-- `emotion = NULL` means the state ended: the face was lost, the session ended, or frustration stopped.
+- `emotion = NULL` means the state ended: the face was lost or the session ended.
+- Frustration detection is future work: the code in `frustration.py` is kept, but the pipeline
+  does not run or log it (`frustration.enabled: false`).
 
 ## Project tree
 
@@ -53,7 +60,7 @@ femotion/
   smoothing.py, state.py    EMA smoothing and emotion state machine
   face_mesh.py              MediaPipe blendshapes (frustration features)
   frustration.py            frustration score and state machine
-  db.py                     SQLite sessions and transitions
+  db.py                     transitions -> shared database (via ../hrc_log)
   metrics.py, visualize.py  FPS/latency meters, optional overlay
   config.py                 config dataclasses + YAML loading
 tests/

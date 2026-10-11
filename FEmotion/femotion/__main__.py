@@ -1,14 +1,22 @@
-"""Entry point: ``python -m femotion [--config config.yaml] [--show] [--duration S]``."""
+"""Entry point: ``python -m femotion [--config config.yaml] [--show] [--duration S]
+[--session-id ID] [--db PATH]``."""
 from __future__ import annotations
 
 import argparse
 import logging
+import os
+import signal
 import sys
 import time
 
 from femotion.config import PROJECT_ROOT, load_config
 
 log = logging.getLogger("femotion")
+
+
+def _stop_on_sigterm(signum, frame):
+    # Same clean shutdown as Ctrl+C (closes open emotion states and the session).
+    raise KeyboardInterrupt
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,12 +26,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--show", action="store_true", help="show the OpenCV debug window")
     parser.add_argument("--duration", type=float, default=None, help="stop after this many seconds")
     parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--session-id", default=None,
+                        help="shared session id (default: $HRC_SESSION_ID, else a new session)")
+    parser.add_argument("--db", default=None, help="shared SQLite database (default: $HRC_DB, else config)")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     cfg = load_config(args.config)
     if args.show:
         cfg.display.show_window = True
+    cfg.database.path = args.db or os.environ.get("HRC_DB") or cfg.database.path
+    cfg.database.session_id = args.session_id or os.environ.get("HRC_SESSION_ID") or None
 
     # Heavy imports after argument parsing so --help stays fast.
     import cv2
@@ -54,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     window = "FEmotion"
+    signal.signal(signal.SIGTERM, _stop_on_sigterm)
     pipeline.start()
     start = last_metrics = time.monotonic()
     try:

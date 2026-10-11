@@ -54,6 +54,14 @@ def parse_args(argv=None):
                         help="speak robot lines (needs pyttsx3)")
     parser.add_argument("--mute", action="store_true",
                         help="no cue sounds")
+    parser.add_argument("--session-id", default=None,
+                        help="shared session id (default: $HRC_SESSION_ID, "
+                             "else a new session)")
+    parser.add_argument("--db", default=None,
+                        help="shared SQLite database (default: $HRC_DB, "
+                             "else data/hrc.db)")
+    parser.add_argument("--csv", action="store_true",
+                        help="also write the CSV log to --log-dir")
     parser.add_argument("--log-dir", default=str(settings.DEFAULT_LOG_DIR))
     parser.add_argument("--echo", action="store_true",
                         help="also print every log row to the console")
@@ -85,7 +93,10 @@ class App:
             assignment=assignment)
         self._validate_spots()
 
-        self.logger = EventLogger(args.log_dir, args.pid, echo=args.echo)
+        self.logger = EventLogger(args.log_dir, args.pid, echo=args.echo,
+                                  db_path=args.db, session_id=args.session_id,
+                                  csv_log=args.csv)
+        print(f"session {self.logger.session_id} -> {self.logger.db_path}")
         self.logger.set_context(order=order_index)
         self.logger.log("system", "session_start",
                         detail=(f"order={'/'.join(order)};"
@@ -286,7 +297,8 @@ class App:
 
     def shutdown(self):
         self.voice.close()
-        self.logger.close()
+        self.logger.close(
+            "completed" if self.mode == FINISHED else "aborted")
         pygame.quit()
 
 

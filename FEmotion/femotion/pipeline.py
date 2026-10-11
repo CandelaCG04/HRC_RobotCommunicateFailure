@@ -14,7 +14,8 @@ from femotion.camera import CameraThread, Frame, LatestFrame
 from femotion.config import AppConfig
 from femotion.db import EventLogger, utc_now
 from femotion.metrics import LatencyMeter, RateMeter
-from femotion.frustration import FrustrationEstimator, FrustrationStateMachine
+# Future work: frustration (re-enable together with the blocks marked below).
+# from femotion.frustration import FrustrationEstimator, FrustrationStateMachine
 from femotion.model import EmotionPrediction
 from femotion.preprocessing import align_face, yaw_proxy
 from femotion.smoothing import ProbabilityEMA
@@ -85,10 +86,11 @@ class _Face:
         s, f = cfg.stability, cfg.frustration
         self.ema = ProbabilityEMA(s.smoothing_tau_ms / 1000)
         self.state = EmotionStateMachine(face_id, s.min_state_confidence, s.hold_ms / 1000)
-        self.frustration = FrustrationEstimator(f, t0) if f.enabled else None
-        self.frustration_state = FrustrationStateMachine(
-            face_id, f.on_threshold, f.off_threshold, f.hold_on_ms / 1000, f.hold_off_ms / 1000
-        )
+        # Future work: frustration.
+        # self.frustration = FrustrationEstimator(f, t0) if f.enabled else None
+        # self.frustration_state = FrustrationStateMachine(
+        #     face_id, f.on_threshold, f.off_threshold, f.hold_on_ms / 1000, f.hold_off_ms / 1000
+        # )
 
 
 class FrameProcessor:
@@ -192,14 +194,15 @@ class FrameProcessor:
             transition = face.state.update(smoothed, t)
             if transition:
                 self._log(transition)
-            if face.frustration is not None:
-                score = face.frustration.update(
-                    t, smoothed, pred.valence, pred.arousal,
-                    self._recent_blendshapes(track.face_id, t), face.state.stable,
-                )
-                transition = face.frustration_state.update(score, t)
-                if transition:
-                    self._log(transition, kind="frustration")
+            # Future work: frustration.
+            # if face.frustration is not None:
+            #     score = face.frustration.update(
+            #         t, smoothed, pred.valence, pred.arousal,
+            #         self._recent_blendshapes(track.face_id, t), face.state.stable,
+            #     )
+            #     transition = face.frustration_state.update(score, t)
+            #     if transition:
+            #         self._log(transition, kind="frustration")
         self.meters.latency.add(self.clock() - frame.t_capture)
 
     def _recent_blendshapes(self, face_id: int, t: float) -> dict[str, float] | None:
@@ -212,10 +215,8 @@ class FrameProcessor:
         face = self._faces.get(track.face_id)
         if face is None:
             return FaceResult(track.face_id, track.box, None, None)
-        return FaceResult(
-            track.face_id, track.box, face.state.stable, face.state.stable_confidence,
-            face.frustration.score if face.frustration else None, face.frustration_state.active,
-        )
+        # Future work: frustration (score and active flag were passed here).
+        return FaceResult(track.face_id, track.box, face.state.stable, face.state.stable_confidence)
 
     def _close_face(self, face_id: int, t: float) -> None:
         self._blendshapes.pop(face_id, None)
@@ -224,20 +225,25 @@ class FrameProcessor:
             transition = face.state.close(t)
             if transition:
                 self._log(transition)
-            transition = face.frustration_state.close(t)
-            if transition:
-                self._log(transition, kind="frustration")
+            # Future work: frustration.
+            # transition = face.frustration_state.close(t)
+            # if transition:
+            #     self._log(transition, kind="frustration")
 
     def _log(self, tr: Transition, kind: str = "emotion") -> None:
-        # Convert the monotonic onset time to an aware UTC wall-clock timestamp.
-        timestamp = utc_now() - timedelta(seconds=max(0.0, self.clock() - tr.t))
+        # Convert the monotonic onset time to an aware UTC wall-clock timestamp, and to
+        # time.monotonic() for the shared session timeline (tests inject a fake clock).
+        age = max(0.0, self.clock() - tr.t)
+        timestamp = utc_now() - timedelta(seconds=age)
+        t_mono = tr.t if self.clock is time.monotonic else time.monotonic() - age
         log.info(
             "face %d [%s]: %s -> %s (conf %s, previous lasted %s ms)",
             tr.face_id, kind, tr.previous, tr.emotion,
             f"{tr.confidence:.2f}" if tr.confidence is not None else "-", tr.duration_ms,
         )
         self.logger.log_transition(
-            tr.face_id, timestamp, tr.previous, tr.emotion, tr.confidence, tr.duration_ms, kind
+            tr.face_id, timestamp, tr.previous, tr.emotion, tr.confidence, tr.duration_ms, kind,
+            t_mono=t_mono,
         )
 
 
@@ -275,11 +281,12 @@ class Pipeline:
         self._camera.join(timeout=5)
 
     def _run_worker(self) -> None:
-        logger = EventLogger(self.cfg.database.path)  # created in, and used only by, this thread
+        # Created in, and used only by, this thread (inserts run on the logger's own thread).
+        logger = EventLogger(self.cfg.database.path, self.cfg.database.session_id)
         processor = None
         try:
             session = logger.start_session(self.cfg.camera.index, self.model.name)
-            log.info("session %d started (db: %s)", session, self.cfg.database.path)
+            log.info("session %s started (db: %s)", session, self.cfg.database.path)
             processor = FrameProcessor(
                 self.cfg, self.detector, self.model, logger, self.meters, mesh=self.mesh
             )

@@ -40,8 +40,8 @@ mesh:                     # MediaPipe Face Landmarker (frustration features only
   max_faces: 2
   match_iou: 0.3
 
-frustration:              # uncalibrated heuristic
-  enabled: true
+frustration:              # uncalibrated heuristic; future work (not used by the pipeline)
+  enabled: false
   weights:                # weighted mean over the features available at each update
     neg_valence: 0.25     # model valence < 0
     arousal: 0.10         # model arousal, only while valence < 0
@@ -60,7 +60,7 @@ frustration:              # uncalibrated heuristic
   hold_off_ms: 1000
 
 database:
-  path: femotion.db
+  path: ../data/hrc.db    # shared with the game; overridden by --db or $HRC_DB
 
 display:
   show_window: false      # or pass --show

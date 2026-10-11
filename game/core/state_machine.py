@@ -412,4 +412,5 @@ class BlockController:
         item_id = self.current.item_id if self.current else ""
         attempt = self.attempts[item_id] if item_id else ""
         self.logger.log(actor, action, item=item_id, attempt=attempt,
-                        feedback_type=feedback_type, detail=detail)
+                        feedback_type=feedback_type, detail=detail,
+                        robot_state=self.state.name)

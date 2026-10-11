@@ -1,10 +1,20 @@
-"""SQLite logging of sessions and emotion state transitions (not frames or raw predictions)."""
+"""Logging of emotion state transitions (not frames or raw predictions) to the shared
+SQLite database (``hrc_log`` at the repository root, table ``events``)."""
 from __future__ import annotations
 
-import sqlite3
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
-SCHEMA = """
+try:
+    import hrc_log
+except ImportError:  # run from FEmotion/: the shared package lives in the repo root
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    import hrc_log
+
+# Pre-unification schema of femotion.db; kept for reference and for
+# ``python -m hrc_log migrate``, which imports such files into the shared database.
+LEGACY_SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at   TEXT NOT NULL,
@@ -23,7 +33,6 @@ CREATE TABLE IF NOT EXISTS emotion_events (
     duration_ms      INTEGER,
     kind             TEXT NOT NULL DEFAULT 'emotion'  -- 'emotion' | 'frustration'
 );
-CREATE INDEX IF NOT EXISTS idx_events_session ON emotion_events(session_id, face_id);
 """
 
 
@@ -32,25 +41,25 @@ def utc_now() -> datetime:
 
 
 class EventLogger:
-    """Owns one SQLite connection; must be used from the thread that created it."""
+    """Writes transitions as ``source='femotion'`` events. Inserts happen on a background
+    thread (``hrc_log.EventWriter``), so logging never stalls the real-time worker.
 
-    def __init__(self, path: str):
-        self._conn = sqlite3.connect(path)
-        # WAL + synchronous=NORMAL: commits no longer fsync, so logging cannot stall the
-        # real-time worker (default mode measured 0.4-2.4 s per commit on a laptop disk).
-        # Trade-off: the last transitions may be lost on power failure (not on app crash).
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._conn.executescript(SCHEMA)
-        self.session_id: int | None = None
+    ``session_id`` joins an existing session (e.g. the game's); None uses
+    ``$HRC_SESSION_ID`` or creates a new session.
+    """
 
-    def start_session(self, camera_index: int | None, model_name: str | None) -> int:
-        cur = self._conn.execute(
-            "INSERT INTO sessions (started_at, camera_index, model_name) VALUES (?, ?, ?)",
-            (utc_now().isoformat(), camera_index, model_name),
+    def __init__(self, path: str | None = None, session_id: str | None = None):
+        self._path = path
+        self._requested_session = session_id
+        self._writer: hrc_log.EventWriter | None = None
+        self.session_id: str | None = None
+
+    def start_session(self, camera_index: int | None, model_name: str | None) -> str:
+        self._writer = hrc_log.EventWriter(
+            self._path, self._requested_session, "femotion",
+            source_meta={"camera_index": camera_index, "model_name": model_name},
         )
-        self._conn.commit()
-        self.session_id = cur.lastrowid
+        self.session_id = self._writer.session_id
         return self.session_id
 
     def log_transition(
@@ -62,36 +71,24 @@ class EventLogger:
         confidence: float | None,
         duration_ms: int | None,
         kind: str = "emotion",
+        t_mono: float | None = None,
     ) -> None:
-        if self.session_id is None:
+        """``timestamp``: wall-clock onset; ``t_mono``: the same instant on
+        ``time.monotonic()`` (preferred for the session timeline)."""
+        if self._writer is None:
             raise RuntimeError("start_session() must be called before logging")
         if timestamp.tzinfo is None:
             raise ValueError("timestamp must be timezone-aware")
-        self._conn.execute(
-            "INSERT INTO emotion_events (session_id, face_id, timestamp, previous_emotion,"
-            " emotion, confidence, duration_ms, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                self.session_id,
-                face_id,
-                timestamp.astimezone(timezone.utc).isoformat(),
-                previous,
-                emotion,
-                confidence,
-                duration_ms,
-                kind,
-            ),
+        self._writer.enqueue(
+            f"{kind}_transition", t_wall=timestamp.timestamp(), t_mono=t_mono,
+            face_id=face_id, previous_emotion=previous, emotion=emotion,
+            confidence=confidence, duration_ms=duration_ms,
         )
-        self._conn.commit()
 
     def end_session(self) -> None:
-        if self.session_id is None:
-            return
-        self._conn.execute(
-            "UPDATE sessions SET ended_at = ? WHERE id = ?",
-            (utc_now().isoformat(), self.session_id),
-        )
-        self._conn.commit()
-        self.session_id = None
+        if self._writer is not None:
+            self._writer.close("completed")
+            self._writer = None
 
     def close(self) -> None:
-        self._conn.close()
+        self.end_session()

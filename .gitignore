@@ -225,3 +225,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# Shared session database and spool (participant data)
+data/

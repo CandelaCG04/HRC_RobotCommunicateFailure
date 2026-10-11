@@ -68,7 +68,7 @@ def _default_frustration_weights() -> dict[str, float]:
 
 @dataclass
 class FrustrationConfig:
-    enabled: bool = True
+    enabled: bool = False  # future work: the pipeline currently ignores frustration
     weights: dict[str, float] = field(default_factory=_default_frustration_weights)
     blendshape_scale: float = 0.3  # blendshape increase over baseline that counts as fully active
     baseline_tau_s: float = 20.0  # per-face resting baseline (updated while neutral)
@@ -90,7 +90,8 @@ class StabilityConfig:
 
 @dataclass
 class DatabaseConfig:
-    path: str = "femotion.db"
+    path: str = "../data/hrc.db"  # shared with the game (overridden by --db / $HRC_DB)
+    session_id: str | None = None  # shared session (--session-id / $HRC_SESSION_ID); None = new
 
 
 @dataclass
