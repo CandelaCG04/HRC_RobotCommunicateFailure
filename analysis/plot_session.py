@@ -1,6 +1,6 @@
 """Figures for one session: game events and emotions on the shared timeline.
 
-    python -m analisys.plot_session [--session ID] [--db PATH] [--out DIR] [--formats png,pdf]
+    python -m analysis.plot_session [--session ID] [--db PATH] [--out DIR] [--formats png,pdf]
 
 Writes to ``<out>/<session>/``:
     timeline.*         emotion states (per face) above the game events, by actor
@@ -37,10 +37,11 @@ CRITICAL = "#d03b3b"          # failure message (status: always with marker + la
 GOOD = "#0ca30c"              # successful delivery (status: always with marker + label)
 # Block background tints: categorical slots 1-3 for the conditions, grey for practice.
 CONDITION_TINT = {"tutorial": "#898781", "silent": "#2a78d6", "explanation": "#eb6834",
-                  "explanation_alternative": "#1baf7a"}
+                  "explanation_alternative": "#1baf7a", "adaptive": "#6250d6"}
 SEQUENTIAL = ["#f0efec", "#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95",
               "#0d366b"]
 CONDITION_LABEL = {"tutorial": "practice", "silent": "silent", "explanation": "explanation",
+                   "adaptive": "adaptive",
                    "explanation_alternative": "explanation + alternative"}
 # Emotion rows top to bottom; neutral last, next to the game lanes.
 EMOTION_ROWS = ("angry", "disgust", "fear", "sad", "surprise", "happy", "neutral")
@@ -226,6 +227,111 @@ def plot_emotion_share(share, out: Path, formats):
     return _save(fig, out, "emotion_share", formats)
 
 
+def _bar_panel(ax, labels, values, title, fmt, ylim=None):
+    """One metric per panel: single-hue bars, value labelled on each bar."""
+    x = np.arange(len(labels))
+    vals = np.asarray(values, dtype=float)
+    ax.bar(x, np.nan_to_num(vals), width=0.6, color=EMOTION_COLOR, zorder=2)
+    for xi, v in zip(x, vals):
+        ax.text(xi, (0 if v != v else v), "n/a" if v != v else fmt.format(v), ha="center",
+                va="bottom", fontsize=8, color=INK_2)
+    ax.set_xticks(x, labels, fontsize=8)
+    ax.set_xlim(-0.6, max(len(labels), 4) - 0.4)   # keep bars narrow when there are few
+    ax.set_title(title, loc="left", fontsize=9.5, color=INK)
+    ax.grid(axis="y", color=GRID, lw=0.6, zorder=0)
+    ax.tick_params(length=0)
+    if ylim:
+        ax.set_ylim(*ylim)
+
+
+def plot_metrics(episodes, tasks, out: Path, formats):
+    """Persistence and interaction-outcome metrics, by condition (fixed mode)
+    or by robot response (adaptive mode)."""
+    from analysis import metrics
+
+    table = metrics.outcome_table(episodes)
+    if table.empty:                 # no failure was answered yet
+        return []
+    by = table.columns[0]
+    labels = [data.ACTION_LABEL.get(v, v) if by == "robot_action" else CONDITION_LABEL.get(v, v)
+              for v in table[by]]
+    labels = [f"{label.replace(' ', chr(10), 1)}\nn={int(n)}"
+              for label, n in zip(labels, table["failure_episodes"])]
+    done = metrics.completion_table(tasks)
+    fig, axes = plt.subplots(2, 4, figsize=(15, 6.4))
+    pct = "{:.0%}"
+    _bar_panel(axes[0, 0], labels, table["continuation_rate"], "Continuation rate", pct, (0, 1.12))
+    _bar_panel(axes[0, 1], labels, table["alternative_acceptance"], "Alternative acceptance",
+               pct, (0, 1.12))
+    _bar_panel(axes[0, 2], labels, table["retry_rate"], "Retry rate", pct, (0, 1.12))
+    _bar_panel(axes[0, 3], labels, table["mean_decision_latency_s"], "Decision latency (s)",
+               "{:.1f}")
+    if not done.empty:
+        cl = [f"{CONDITION_LABEL.get(c, c).replace(' ', chr(10), 1)}\nn={int(n)}"
+              for c, n in zip(done["condition"], done["tasks"])]
+        _bar_panel(axes[1, 0], cl, done["completion_rate"], "Task completion", pct, (0, 1.12))
+        _bar_panel(axes[1, 1], cl, done["mean_attempts"], "Attempts per failed task", "{:.1f}")
+        _bar_panel(axes[1, 2], cl, done["mean_time_to_abandonment_s"],
+                   "Time to abandonment (s)", "{:.1f}")
+        _bar_panel(axes[1, 3], cl, done["mean_inter_attempt_s"], "Inter-attempt time (s)",
+                   "{:.1f}")
+    else:
+        for ax in axes[1]:
+            ax.set_visible(False)
+    group = "robot response" if by == "robot_action" else "condition"
+    fig.suptitle(f"Interaction outcome per {group} (top) and persistence per condition "
+                 f"(bottom), failure episodes n={len(episodes)}", x=0.01, ha="left", fontsize=11)
+    fig.tight_layout()
+    return _save(fig, out, "metrics", formats)
+
+
+STATE_COLORS = {"receptive": "#2a78d6", "frustrated": "#eb6834", "disengaging": "#1baf7a"}
+
+
+def plot_adaptation(episodes, out: Path, formats):
+    """Adaptive sessions: the robot's belief after each failure, the response
+    it chose and the reward it received."""
+    if episodes.empty or not (episodes["phase"] != "fixed").any():
+        return []
+    ep = episodes.reset_index(drop=True)
+    x = np.arange(1, len(ep) + 1)
+    fig, (top, bottom) = plt.subplots(2, 1, sharex=True, figsize=(max(9, 0.55 * len(ep) + 3), 6),
+                                      gridspec_kw={"height_ratios": [3, 2], "hspace": 0.1})
+    base = 0
+    for state, color in STATE_COLORS.items():
+        col = f"p_{state}"
+        vals = ep[col].fillna(0).to_numpy() if col in ep else np.zeros(len(ep))
+        top.bar(x, vals, bottom=base, width=0.75, color=color, edgecolor=SURFACE, lw=1,
+                label=state, zorder=2)
+        base = base + vals
+    top.set_ylim(0, 1)
+    top.set_ylabel("belief after the\nparticipant's decision", color=INK_2)
+    top.legend(loc="upper left", bbox_to_anchor=(1.0, 1.0), frameon=False, fontsize=8.5)
+    rewards = ep["reward"].astype(float).fillna(0).to_numpy()
+    bottom.bar(x, rewards, width=0.6, color=EMOTION_COLOR, zorder=2)
+    bottom.axhline(0, color=AXIS, lw=1)
+    bottom.set_ylabel("reward", color=INK_2)
+    bottom.grid(axis="y", color=GRID, lw=0.6, zorder=0)
+    ticks = [f"{a}\n{d or '–'}" for a, d in zip(ep["robot_action"], ep["decision"])]
+    bottom.set_xticks(x, ticks, fontsize=7.5)
+    bottom.set_xlabel("failure episode: robot response / participant decision", color=INK_2)
+    n_base = int((ep["phase"] == "baseline").sum())
+    for ax in (top, bottom):
+        ax.tick_params(length=0)
+        if n_base:
+            ax.axvspan(0.5, n_base + 0.5, color=MUTED, alpha=0.1, lw=0, zorder=0)
+    if n_base:
+        top.text((n_base + 1) / 2, 1.02, "baseline schedule", ha="center", va="bottom",
+                 transform=top.get_xaxis_transform(), fontsize=8.5, color=INK_2)
+        top.text((n_base + len(ep) + 1) / 2, 1.02, f"adaptive ({ep['policy'].dropna().iloc[0]})",
+                 ha="center", va="bottom", transform=top.get_xaxis_transform(), fontsize=8.5,
+                 color=INK_2)
+    fig.suptitle("How the robot's estimate of the user and its responses evolved", x=0.01,
+                 ha="left", fontsize=11, y=1.0)
+    fig.subplots_adjust(left=0.1, right=0.87)
+    return _save(fig, out, "adaptation", formats)
+
+
 def _save(fig, out: Path, name: str, formats) -> list[Path]:
     out.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -247,6 +353,10 @@ def plot_session(db=None, session=None, out_dir: Path = OUT_DIR, formats=("png",
     paths = plot_timeline(events, intervals, spans, failures, session, out, formats)
     paths += plot_failure_locked(intervals, failures, out, formats)
     paths += plot_emotion_share(data.emotion_share(intervals, spans), out, formats)
+    from analysis import metrics
+    episodes = metrics.failure_episodes(events)
+    paths += plot_metrics(episodes, metrics.persistence(events), out, formats)
+    paths += plot_adaptation(episodes, out, formats)
     return paths
 
 

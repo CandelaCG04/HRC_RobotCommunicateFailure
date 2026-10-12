@@ -1,10 +1,12 @@
 """Export analysis tables for one session as CSV and print a short summary.
 
-    python -m analisys.summary [--session ID] [--db PATH] [--out DIR]
+    python -m analysis.summary [--session ID] [--db PATH] [--out DIR]
 
 Writes to ``<out>/<session>/``: events.csv, emotion_intervals.csv,
 failures.csv (with the emotion before/after each failure message),
-emotion_share.csv and trial_summary.csv.
+emotion_share.csv, trial_summary.csv, and the evaluation metrics
+failure_episodes.csv, persistence.csv, outcomes.csv and completion.csv
+(see metrics.py).
 """
 from __future__ import annotations
 
@@ -13,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from analysis import data
+from analysis import data, metrics
 
 OUT_DIR = Path(__file__).resolve().parent / "output"
 REACTION_WINDOW = 5.0   # seconds after a failure message counted as the reaction
@@ -46,6 +48,14 @@ def export(db=None, session=None, out_dir: Path = OUT_DIR) -> dict[str, pd.DataF
         "emotion_share": data.emotion_share(intervals, spans),
         "trial_summary": data.trial_summary(db, session),
     }
+    episodes = metrics.failure_episodes(events)
+    tasks = metrics.persistence(events)
+    tables.update({
+        "failure_episodes": episodes,
+        "persistence": tasks,
+        "outcomes": metrics.outcome_table(episodes),
+        "completion": metrics.completion_table(tasks),
+    })
     out = Path(out_dir) / session
     out.mkdir(parents=True, exist_ok=True)
     for name, table in tables.items():
@@ -73,13 +83,24 @@ def print_summary(tables) -> None:
         print(failures[cols].round({"t_session": 1}).to_string(index=False))
 
 
+def print_metrics(tables) -> None:
+    for name, title in (("outcomes", "interaction outcome"),
+                        ("completion", "task completion and persistence (failed tasks)")):
+        table = tables[name]
+        if not table.empty:
+            print(f"\n{title}:")
+            print(table.round(2).to_string(index=False))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--session", help="session id (default: latest)")
     parser.add_argument("--db", help="database (default: $HRC_DB or data/hrc.db)")
     parser.add_argument("--out", default=str(OUT_DIR))
     args = parser.parse_args(argv)
-    print_summary(export(args.db, args.session, Path(args.out)))
+    tables = export(args.db, args.session, Path(args.out))
+    print_summary(tables)
+    print_metrics(tables)
 
 
 if __name__ == "__main__":

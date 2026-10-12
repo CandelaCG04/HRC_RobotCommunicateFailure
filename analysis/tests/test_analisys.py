@@ -92,6 +92,7 @@ def test_clis_write_files_and_do_not_modify_db(db_path, tmp_path, capsys):
     summary.main(["--db", str(db_path), "--session", "s", "--out", str(tmp_path / "out")])
     assert {p.name for p in (tmp_path / "out" / "s").iterdir()} == {
         "events.csv", "emotion_intervals.csv", "failures.csv", "emotion_share.csv",
-        "trial_summary.csv"}
+        "trial_summary.csv", "failure_episodes.csv", "persistence.csv", "outcomes.csv",
+        "completion.csv"}
     assert "failure messages: 1" in capsys.readouterr().out
     assert db_path.stat().st_mtime_ns == mtime

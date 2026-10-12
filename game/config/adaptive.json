@@ -1,0 +1,74 @@
+{
+  "_comment": "Adaptive failure-response mode (--adaptive). All probabilities are hand-set priors (hypotheses, not fitted). States: receptive, frustrated, disengaging. Actions: a1 silent, a2 explain, a3 explain + alternative, a4 explain + offer retry, a5 explain + apologise. The first baseline_episodes failures follow a counterbalanced schedule (Williams design over a1-a5; row chosen like the condition order: --balanced by participant number, --order N forces row N, else random); later failures are chosen by the policy.",
+  "states": ["receptive", "frustrated", "disengaging"],
+  "initial_belief": [0.7, 0.2, 0.1],
+  "baseline_episodes": 5,
+
+  "_comment_emission": "P(observation | state) per channel. Emotion: soft evidence, the confidence-weighted share of the reaction window (failure message -> decision) spent in each stable emotion. Fear/surprise ('ambiguous'), low confidence and 'no face' carry no evidence (equal likelihood in every state).",
+  "emission": {
+    "emotion": {
+      "receptive":   {"happy": 0.25, "anger": 0.05, "sadness": 0.05, "disgust": 0.05, "neutral": 0.60},
+      "frustrated":  {"happy": 0.05, "anger": 0.35, "sadness": 0.10, "disgust": 0.20, "neutral": 0.30},
+      "disengaging": {"happy": 0.05, "anger": 0.10, "sadness": 0.30, "disgust": 0.10, "neutral": 0.45}
+    },
+    "decision": {
+      "receptive":   {"retry": 0.35, "accept_alt": 0.30, "self": 0.15, "switch": 0.15, "give_up": 0.05},
+      "frustrated":  {"retry": 0.20, "accept_alt": 0.25, "self": 0.25, "switch": 0.15, "give_up": 0.15},
+      "disengaging": {"retry": 0.05, "accept_alt": 0.10, "self": 0.25, "switch": 0.20, "give_up": 0.40}
+    },
+    "pause": {
+      "receptive":   {"fast": 0.45, "normal": 0.45, "slow": 0.10},
+      "frustrated":  {"fast": 0.40, "normal": 0.40, "slow": 0.20},
+      "disengaging": {"fast": 0.15, "normal": 0.40, "slow": 0.45}
+    }
+  },
+  "pause_bins_s": {"fast_below": 3.0, "slow_from": 8.0},
+
+  "_comment_transition": "Prior P(next state | state, action): 'default' rows, overridden per action. prior_strength = pseudo-observations per row; the robot's per-user model starts here and is updated after every failure.",
+  "transition_prior": {
+    "default": {
+      "receptive":   [0.80, 0.15, 0.05],
+      "frustrated":  [0.25, 0.60, 0.15],
+      "disengaging": [0.15, 0.15, 0.70]
+    },
+    "a1": {
+      "receptive":   [0.70, 0.20, 0.10],
+      "frustrated":  [0.15, 0.65, 0.20],
+      "disengaging": [0.10, 0.15, 0.75]
+    },
+    "a3": {
+      "frustrated":  [0.40, 0.45, 0.15],
+      "disengaging": [0.25, 0.15, 0.60]
+    },
+    "a5": {
+      "frustrated":  [0.30, 0.55, 0.15],
+      "disengaging": [0.25, 0.15, 0.60]
+    }
+  },
+  "prior_strength": 10,
+
+  "_comment_reward": "Desires: reward = progress[decision] + engagement * (P'(receptive) - P'(disengaging)) + affect * emotion_valence - action_cost. reward_prior: prior mean reward per state and action (hypotheses), reward_prior_count pseudo-observations, reward_noise_sd for Thompson sampling.",
+  "reward": {
+    "weights": {"engagement": 0.5, "affect": 0.5},
+    "progress": {"retry": 0.5, "accept_alt": 1.0, "self": 0.3, "switch": 0.0, "give_up": -1.0},
+    "valence": {"happy": 1.0, "anger": -1.0, "sadness": -1.0, "disgust": -1.0, "neutral": 0.0},
+    "action_cost": {"a1": 0.0, "a2": 0.05, "a3": 0.1, "a4": 0.05, "a5": 0.1}
+  },
+  "reward_prior": {
+    "receptive":   {"a1": 0.0,  "a2": 0.3, "a3": 0.4, "a4": 0.4, "a5": 0.3},
+    "frustrated":  {"a1": -0.3, "a2": 0.0, "a3": 0.4, "a4": 0.0, "a5": 0.2},
+    "disengaging": {"a1": -0.5, "a2": -0.1, "a3": 0.2, "a4": -0.2, "a5": 0.2}
+  },
+  "reward_prior_count": 1.0,
+  "reward_noise_sd": 0.5,
+  "discount": 0.7,
+
+  "_comment_heuristic": "Rules are checked in order; the first match whose action is allowed wins. when: frustration_rising (P(frustrated) rose by more than 'threshold' at the last update), most_likely (argmax belief == state), last_decision (previous failure ended with 'decision'), always.",
+  "heuristic_rules": [
+    {"when": "frustration_rising", "threshold": 0.1, "action": "a3"},
+    {"when": "most_likely", "state": "frustrated", "action": "a3"},
+    {"when": "most_likely", "state": "disengaging", "action": "a5"},
+    {"when": "last_decision", "decision": "give_up", "action": "a3"},
+    {"when": "always", "action": "a4"}
+  ]
+}

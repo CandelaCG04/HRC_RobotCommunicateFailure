@@ -1,5 +1,0 @@
-t_session,block_id,condition,item,attempt,trial_id,feedback_type,message,failure_type,emotion_before,emotions_within_5s
-96.74303332000272,A,silent,blanket,1,A:blanket:1,silent,(no message),navigation,neutral,disgust
-110.60745717400277,A,silent,blanket,2,A:blanket:2,silent,(no message),navigation,neutral,angry
-148.05036233800274,A,silent,reading_glasses,1,A:reading_glasses:1,silent,(no message),perception,neutral,
-198.33154658000058,A,silent,glass_of_milk,1,A:glass_of_milk:1,silent,(no message),manipulation,neutral,

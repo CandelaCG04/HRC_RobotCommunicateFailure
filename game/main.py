@@ -6,14 +6,20 @@ Usage (from the repository root)::
     python -m game.main --pid P01 --balanced     # order from participant no.
     python -m game.main --pid P03 --tts --fullscreen
     python -m game.main --pid TEST --fast 4 --echo     # quick pilot run
+    python -m game.main --pid P05 --adaptive --policy mdp   # closed-loop robot
 """
 import argparse
+import random
 
 import pygame
 
 from game import settings
+from game.adaptive import load_config as load_adaptive_config
+from game.adaptive.mind import RobotMind
+from game.adaptive.policy import BASELINE_ROWS
+from game.adaptive.sensing import EmotionReader
 from game.core.logger import EventLogger
-from game.core.session import build_session
+from game.core.session import baseline_row, build_session
 from game.core.state_machine import BlockController
 from game.core.world import World
 from game.ui.dialog_panel import DialogPanel
@@ -43,7 +49,8 @@ def parse_args(argv=None):
     parser.add_argument("--pid", default="P00",
                         help="participant id, e.g. P07")
     parser.add_argument("--order", type=int, default=None,
-                        help="force condition order index (0-5)")
+                        help="force condition order index (0-5); with "
+                             "--adaptive: baseline schedule row (0-9)")
     parser.add_argument("--balanced", action="store_true",
                         help="pick the order from the participant number "
                              "instead of at random")
@@ -65,6 +72,14 @@ def parse_args(argv=None):
     parser.add_argument("--log-dir", default=str(settings.DEFAULT_LOG_DIR))
     parser.add_argument("--echo", action="store_true",
                         help="also print every log row to the console")
+    parser.add_argument("--adaptive", action="store_true",
+                        help="closed-loop mode: the robot chooses each failure "
+                             "response from the participant's reactions")
+    parser.add_argument("--policy", choices=("heuristic", "mdp"),
+                        default="mdp", help="adaptive policy (default mdp)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="random seed of the adaptive policy "
+                             "(default: random, logged)")
     parser.add_argument("--fast", type=float, default=1.0,
                         help="time multiplier for testing (never in study)")
     return parser.parse_args(argv)
@@ -89,18 +104,27 @@ class App:
         else:
             assignment = "balanced" if args.balanced else "random"
         self.blocks, order_index, order = build_session(
-            args.pid, args.order, include_tutorial=not args.no_tutorial,
-            assignment=assignment)
+            args.pid, None if args.adaptive else args.order,
+            include_tutorial=not args.no_tutorial,
+            assignment="random" if assignment == "forced" else assignment,
+            adaptive=args.adaptive)
         self._validate_spots()
 
         self.logger = EventLogger(args.log_dir, args.pid, echo=args.echo,
                                   db_path=args.db, session_id=args.session_id,
                                   csv_log=args.csv)
         print(f"session {self.logger.session_id} -> {self.logger.db_path}")
+        detail = (f"order={'/'.join(order)};assignment={assignment};"
+                  f"fast={args.fast}")
+        self.mind = None
+        if args.adaptive:
+            self.mind = self._make_mind(args, assignment)
+            order_index = self.mind.schedule.row_index
+            detail += (f";mode=adaptive;policy={args.policy};"
+                       f"baseline={'/'.join(self.mind.schedule.order)};"
+                       f"seed={self.mind.seed}")
         self.logger.set_context(order=order_index)
-        self.logger.log("system", "session_start",
-                        detail=(f"order={'/'.join(order)};"
-                                f"assignment={assignment};fast={args.fast}"))
+        self.logger.log("system", "session_start", detail=detail)
 
         self.fonts = Fonts()
         self.renderer = Renderer(self.screen, self.world, self.fonts)
@@ -121,6 +145,17 @@ class App:
         self.t = 0.0
         self.last_esc = -ESC_WINDOW_MS
         self.running = True
+
+    def _make_mind(self, args, assignment):
+        """Adaptive mode: one mind for the whole session (it keeps learning
+        across blocks), reading emotions from the shared database."""
+        seed = args.seed
+        if seed is None:
+            seed = random.SystemRandom().randrange(2 ** 31)
+        row = baseline_row(args.pid, args.order, assignment, len(BASELINE_ROWS))
+        reader = EmotionReader(self.logger.db_path, self.logger.session_id)
+        return RobotMind(load_adaptive_config(), args.policy, row, seed,
+                         reader)
 
     def _validate_spots(self):
         """Fail at start-up, not mid-session, if a config names a bad spot."""
@@ -266,7 +301,7 @@ class App:
                                 block_id=block.block_id,
                                 condition=block.condition)
         self.controller = BlockController(block, self.world, self.logger,
-                                          self.voice)
+                                          self.voice, mind=self.mind)
         self.minigame.start_block(block.items)
         self.controller.on_resolved = self.minigame.item_resolved
         self.end_delay = 0.0
@@ -297,6 +332,8 @@ class App:
 
     def shutdown(self):
         self.voice.close()
+        if self.mind and self.mind.reader:
+            self.mind.reader.close()
         self.logger.close(
             "completed" if self.mode == FINISHED else "aborted")
         pygame.quit()

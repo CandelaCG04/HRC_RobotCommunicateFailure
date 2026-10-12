@@ -111,9 +111,22 @@ def _parse_item(item_id, entry, outcome):
                      outcome == "success", failure)
 
 
+def baseline_row(pid, order_index, assignment, n_rows):
+    """Row of the adaptive baseline schedule, chosen like the condition order."""
+    if order_index is not None:
+        return order_index % n_rows
+    if assignment == "balanced":
+        return (participant_number(pid) - 1) % n_rows
+    return random.SystemRandom().randrange(n_rows)
+
+
 def build_session(pid, order_index=None, include_tutorial=True,
-                  assignment="random"):
+                  assignment="random", adaptive=False):
     """Return (list of BlockPlan, order_index, condition order).
+
+    With ``adaptive=True`` every block after the practice gets the condition
+    "adaptive": the robot chooses each failure response itself
+    (game/adaptive/); the condition order is then not used.
 
     The condition order is one of the permutations in counterbalance.json:
       - ``order_index`` given: use exactly that order (e.g. to redo a run)
@@ -139,6 +152,8 @@ def build_session(pid, order_index=None, include_tutorial=True,
             raise ValueError(f"Unknown condition '{condition}'")
 
     sequence = [("tutorial", responses.TUTORIAL)] if include_tutorial else []
+    if adaptive:
+        order = [responses.ADAPTIVE] * len(balance["block_order"])
     sequence += list(zip(balance["block_order"], order))
 
     plans = []

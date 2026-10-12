@@ -22,8 +22,15 @@ from hrc_log.db import default_db_path  # noqa: E402
 
 # Same order as FEmotion/femotion/emotions.py EMOTIONS (not importable here).
 EMOTIONS = ("angry", "disgust", "fear", "happy", "sad", "surprise", "neutral")
-FAILURE_FEEDBACK = ("silent", "explanation", "explanation_alternative")
-CONDITIONS = ("tutorial",) + FAILURE_FEEDBACK
+FIXED_CONDITIONS = ("silent", "explanation", "explanation_alternative")
+# Failure responses a1..a5 (game/robot/responses.py ACTION_FEEDBACK); the
+# first three are also the fixed conditions.
+ACTION_OF_FEEDBACK = {"silent": "a1", "explanation": "a2", "explanation_alternative": "a3",
+                      "explanation_retry": "a4", "explanation_apology": "a5"}
+ACTION_LABEL = {"a1": "a1 silent", "a2": "a2 explain", "a3": "a3 alternative",
+                "a4": "a4 retry offer", "a5": "a5 apology"}
+FAILURE_FEEDBACK = tuple(ACTION_OF_FEEDBACK)
+CONDITIONS = ("tutorial",) + FIXED_CONDITIONS + ("adaptive",)
 ACTORS = ("robot", "human", "system")
 
 

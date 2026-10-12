@@ -230,5 +230,5 @@ venv/
 data/
 
 # Analysis outputs (participant data)
-analisys/figures/
-analisys/output/
+analysis/figures/
+analysis/output/

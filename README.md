@@ -95,6 +95,59 @@ These cues help the participant keep track of the robot while working on the act
 
 Each cue is logged as `system,cue,<name>`. You can tune `REMINDER_AFTER` and `SOUND_VOLUME` in `settings.py`.
 
+## Adaptive mode (closed-loop robot)
+
+```bash
+python3 run_session.py --pid P05 -- --adaptive                   # MDP policy (default)
+python3 run_session.py --pid P05 -- --adaptive --policy heuristic --balanced
+```
+
+Instead of a fixed condition per part, the robot chooses each failure response itself (Sense - Think - Act). The fixed-condition mode above stays the default; `--adaptive` is a separate, between-subjects mode.
+
+| Action | Robot response | Logged `feedback_type` |
+|---|---|---|
+| `a1` | Fail silently | `silent` |
+| `a2` | Explain inability | `explanation` |
+| `a3` | Explain and propose an alternative (alternative button shown) | `explanation_alternative` |
+| `a4` | Explain and offer to try again | `explanation_retry` |
+| `a5` | Explain and apologise | `explanation_apology` |
+
+**Sense.** After each failure the robot takes the window from its failure message to the participant's decision. It reads the participant's stable facial emotions in that window from the shared database, where FEmotion writes them, and it records the decision (`retry`, `accept_alt`, `self`, `switch` = something else, or `give_up` = abandon) and how long the participant took to decide.
+
+**Think: state.** A hidden Markov model keeps a belief over *receptive*, *frustrated* and *disengaging*, updated once per failure, so a single facial reading only nudges it.
+
+- Emotion is soft evidence: confidence-weighted time in each emotion.
+- Fear and surprise, low confidence and "no face" carry no evidence.
+- Retries count as engagement. Long pauses and giving up point to disengaging.
+
+**Think: decision.**
+
+- **Baseline:** the first 5 failures use every response once, in a counterbalanced order (Williams design, 10 orders). `--balanced` picks the order by participant number and `--order N` forces one; otherwise it is random.
+- **Then** the policy decides:
+  - `heuristic`: ordered rules, e.g. offer the alternative when frustration rises and apologise when the user seems to disengage.
+  - `mdp`: a small MDP over (state, response). It is solved on a Thompson sample of what the robot has learned about this user and applied to the belief (QMDP).
+
+**Adapt.** After every failure the robot updates how this user's state responds to each response (Dirichlet counts) and how rewarding each response was.
+- The reward is task progress, plus engagement (P(receptive) − P(disengaging)), plus facial valence, minus a small cost for longer   messages.
+- Learning is per session, starting from hand-set priors.
+
+| BDI | In the code (`game/adaptive/mind.py`) |
+|---|---|
+| Beliefs | user-state belief, task status, alternative availability, outcome history, learned per-user model and its uncertainty |
+| Desires | reward weights: task progress, engagement, low frustration |
+| Intentions | the chosen response for this failure, with phase, policy and rationale |
+
+**Configuration.** All probabilities, rules and weights are in `game/config/adaptive.json`. They are documented hypotheses, not fitted values. `--seed` makes a run reproducible; the seed is logged either way.
+
+**Log events.** In adaptive mode the log has three extra kinds of event:
+- `policy_decision`: the response with its belief, scores and rationale.
+- `feedback_start`: carries `{robot_action, phase, policy}`.
+- `belief_update`: after each decision, with the observation, the belief before and after, the reward and the learned model.
+
+The session's `session_start` row records `mode`, `policy`, `baseline` and `seed`.
+
+Without FEmotion the robot adapts on behaviour alone.
+
 ## Log format
 
 The game and FEmotion write to one SQLite database, `data/hrc.db` (git-ignored because it contains participant data), via the shared standard-library package `hrc_log/`. Each event is one row of `events`; `sessions` holds one row per session and `session_sources` one row per process that joined it. The schema is in `hrc_log/schema.sql`.
@@ -150,16 +203,12 @@ python3 -m hrc_log query all --session ID
 
 ## Changing content
 
-- `game/config/items.json`: items, where they are, the activity each one
-  unlocks (`use`) and its interaction (`do`), and their failure
-  explanation and alternative.
-- `game/config/blocks.json`: which items appear in each part, whether
-  they succeed.
+- `game/config/items.json`: items, where they are, the activity each one unlocks (`use`) and its interaction (`do`), and their failure explanation and alternative.
+- `game/config/blocks.json`: which items appear in each part, whether they succeed.
 - `game/config/counterbalance.json`: the condition orders.
-- `game/settings.py`: speeds, timings, the attempt cap and the time
-  limit.
-- `game/robot/responses.py`: which parts of the message are said in which
-  condition.
+- `game/settings.py`: speeds, timings, the attempt cap and the time limit.
+- `game/robot/responses.py`: which parts of the message are said in which condition, and the adaptive responses a1-a5.
+- `game/config/adaptive.json`: the adaptive model (priors, emission tables, rules, reward weights).
 
 ## Code layout
 
@@ -182,6 +231,9 @@ game/
     movement.py        smooth grid movement
     avatar.py          the participant's character
     logger.py          event log (shared database, optional CSV)
+  adaptive/            adaptive mode: sensing, observations, HMM belief,
+                       policies (baseline / heuristic / MDP), RobotMind (BDI)
+  tests/               adaptive-model tests (no pygame needed)
   robot/
     robot.py           robot agent (face, carrying)
     responses.py       condition-dependent robot speech
@@ -196,11 +248,9 @@ game/
 
 ## Analysis
 
-Timeline plots of game events and facial emotion, failure-locked emotion
-plots and CSV exports are in `analisys/` (own virtual environment; see
-`analisys/README.md`):
+Timeline plots of game events and facial emotion, failure-locked emotion plots and CSV exports are in `analysis/` (own virtual environment; see `analysis/README.md`):
 
 ```bash
-analisys/.venv/bin/python -m analisys.plot_session   # figures for the latest session
-analisys/.venv/bin/python -m analisys.summary        # CSV tables + summary
+analysis/.venv/bin/python -m analysis.plot_session   # figures for the latest session
+analysis/.venv/bin/python -m analysis.summary        # CSV tables + summary
 ```

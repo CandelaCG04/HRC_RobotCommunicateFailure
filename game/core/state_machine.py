@@ -12,6 +12,7 @@ Flow of one request::
                                               | do it myself | ask for
                                               something else | never mind
 """
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -63,8 +64,15 @@ class Task:
 class BlockController:
     """Runs one block (one condition) of the experiment."""
 
-    def __init__(self, block, world, logger, voice):
+    def __init__(self, block, world, logger, voice, mind=None):
         self.block = block
+        # Adaptive mode (game/adaptive/): the mind chooses each failure
+        # response and learns from the participant's reactions. None = the
+        # block's fixed condition decides, as in the original design.
+        self.mind = mind
+        self.failure_action = None      # a1..a5 of the current failure
+        self._feedback_wall = None      # when the failure message started
+        self._deciding_since = None     # real time the options appeared
         self.world = world
         self.logger = logger
         self.voice = voice
@@ -155,7 +163,9 @@ class BlockController:
         options = []
         if self.attempts[item.item_id] < settings.MAX_ATTEMPTS:
             options.append(("Try again", "retry"))
-        if responses.offers_alternative(self.block.condition):
+        if (responses.action_offers_alternative(self.failure_action)
+                if self.mind else
+                responses.offers_alternative(self.block.condition)):
             options.append((item.failure.alternative.button, "accept_alt"))
         options.append(("I'll get it myself", "self"))
         if len(self.pending_items()) > 1:
@@ -186,6 +196,8 @@ class BlockController:
             self.current = self.items[item_id]
             self._start_attempt("request_item")
         elif self.state == State.DECIDING:
+            if key in ("retry", "accept_alt", "self", "switch", "give_up"):
+                self._observe_decision(key)
             handler = {
                 "retry": self._on_retry,
                 "accept_alt": self._on_accept_alternative,
@@ -305,6 +317,7 @@ class BlockController:
         elif state == State.FAIL_FEEDBACK and timer_done:
             self._log("robot", "feedback_end")
             self._enter(State.DECIDING)
+            self._deciding_since = time.monotonic()
             self._cue("input_needed")
 
         elif state == State.SELF_OUT and avatar_arrived:
@@ -358,14 +371,50 @@ class BlockController:
                       feedback_type=feedback_type, detail=text)
             self._enter(State.DELIVERING, settings.DELIVER_TIME)
         else:
-            feedback_type, text = responses.failure_feedback(
-                self.block.condition, self.current.failure)
+            payload = None
+            if self.mind:
+                payload = self._choose_failure_response()
+                feedback_type, text = responses.action_feedback(
+                    self.failure_action, self.current.failure)
+            else:
+                feedback_type, text = responses.failure_feedback(
+                    self.block.condition, self.current.failure)
             self.robot.face = "sad"
             self._say(text)
+            self._feedback_wall = time.time()
             self._log("robot", "feedback_start",
                       feedback_type=feedback_type,
-                      detail=text or "(no message)")
+                      detail=text or "(no message)", payload=payload)
             self._enter(State.FAIL_FEEDBACK, settings.FEEDBACK_TIME)
+
+    # ------------------------------------------------------------ adaptive
+    def _choose_failure_response(self):
+        """Think: the mind picks a1..a5 for this failure. Returns the payload
+        stored with feedback_start."""
+        item = self.current
+        intent = self.mind.choose(
+            item.item_id,
+            alternative_available=item.failure is not None,
+            retry_available=self.attempts[item.item_id] < settings.MAX_ATTEMPTS)
+        self.failure_action = intent.action
+        self._log("system", "policy_decision", detail=intent.action,
+                  payload={"robot_action": intent.action, "phase": intent.phase,
+                           "policy": intent.policy, "rationale": intent.rationale,
+                           "scores": intent.scores, "belief": intent.belief})
+        return {"robot_action": intent.action, "phase": intent.phase,
+                "policy": intent.policy}
+
+    def _observe_decision(self, decision):
+        """Sense + adapt: the participant answered the failure."""
+        if not self.mind or self.mind.intention is None:
+            return
+        now = time.time()
+        latency = time.monotonic() - (self._deciding_since or time.monotonic())
+        record = self.mind.observe(decision, latency,
+                                   self._feedback_wall or now, now)
+        self._log("system", "belief_update",
+                  detail=f"{record['most_likely']};reward={record['reward']}",
+                  payload=record)
 
     def _move_robot(self, spot_name):
         self.robot.go_to(self.world.spot(spot_name),
@@ -408,9 +457,9 @@ class BlockController:
         if text:
             self.voice.say(text)
 
-    def _log(self, actor, action, feedback_type="", detail=""):
+    def _log(self, actor, action, feedback_type="", detail="", payload=None):
         item_id = self.current.item_id if self.current else ""
         attempt = self.attempts[item_id] if item_id else ""
         self.logger.log(actor, action, item=item_id, attempt=attempt,
                         feedback_type=feedback_type, detail=detail,
-                        robot_state=self.state.name)
+                        robot_state=self.state.name, payload=payload)

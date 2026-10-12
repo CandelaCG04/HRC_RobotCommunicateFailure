@@ -59,9 +59,10 @@ class EventLogger:
         self.context.update(fields)
 
     def log(self, actor, action, item="", attempt="", feedback_type="",
-            detail="", robot_state=""):
+            detail="", robot_state="", payload=None):
         """Write one event. ``actor`` is 'robot', 'human' or 'system'.
-        ``robot_state`` is the block controller's state at that moment."""
+        ``robot_state`` is the block controller's state at that moment;
+        ``payload`` (dict) is stored as JSON in the database only."""
         now, mono = time.time(), time.monotonic()
         t_game = time.perf_counter() - self._t0
         row = {
@@ -82,7 +83,8 @@ class EventLogger:
             action, t_wall=now, t_mono=mono, **self.context, actor=actor,
             action=action, item=item, attempt=attempt,
             feedback_type=feedback_type, detail=detail, task_id=task_id,
-            trial_id=trial_id, robot_state=robot_state, t_game=t_game)
+            trial_id=trial_id, robot_state=robot_state, t_game=t_game,
+            payload=payload)
         if self._file is not None:
             self._csv.writerow(row)
             self._file.flush()      # nothing is lost if the game crashes
